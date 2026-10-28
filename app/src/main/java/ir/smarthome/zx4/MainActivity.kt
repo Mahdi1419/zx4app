@@ -101,17 +101,38 @@ fun Root() {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f), tonalElevation = 0.dp) {
-                    listOf("خانه" to Icons.Filled.Home, "تاریخچه" to Icons.Filled.History, "تنظیمات" to Icons.Filled.Settings)
-                        .forEachIndexed { i, (l, ic) ->
-                            NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = { Icon(ic, l) }, label = { Text(l) })
+                Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 10.dp)) {
+                    Surface(shape = RoundedCornerShape(28.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f)),
+                        shadowElevation = 12.dp) {
+                        Row(Modifier.fillMaxWidth().padding(7.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            listOf("خانه" to Icons.Filled.Home, "تاریخچه" to Icons.Filled.History, "تنظیمات" to Icons.Filled.Settings)
+                                .forEachIndexed { i, (l, ic) ->
+                                    val selected = tab == i
+                                    Surface(onClick = { tab = i }, shape = RoundedCornerShape(20.dp),
+                                        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent,
+                                        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.weight(1f)) {
+                                        Column(Modifier.padding(vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Icon(ic, null, modifier = Modifier.size(22.dp))
+                                            Text(l, style = MaterialTheme.typography.labelSmall, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                                        }
+                                    }
+                                }
                         }
+                    }
                 }
             },
             floatingActionButton = {
-                if (tab == 0) ExtendedFloatingActionButton(
-                    onClick = { editing = null; showEditor = true }, shape = RoundedCornerShape(20.dp),
-                    icon = { Icon(Icons.Filled.Add, null) }, text = { Text("آیتم جدید") })
+                if (tab == 0) FloatingActionButton(
+                    onClick = { editing = null; showEditor = true },
+                    shape = RoundedCornerShape(22.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) { Icon(Icons.Filled.Add, "فرمان جدید") }
             },
         ) { pad ->
             Box(Modifier.padding(pad)) {
@@ -146,94 +167,72 @@ fun Root() {
 @Composable
 fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () -> Unit, onRun: (Item) -> Unit) {
     val ctx = LocalContext.current
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Surface(
-                shape = RoundedCornerShape(30.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-            ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(Repo.appTitle.ifBlank { "خانه هوشمند" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text("کنترل سریع دستگاه‌ها", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                val ok = Repo.phone.isNotBlank()
-                Surface(
-                    onClick = onSettings, shape = CircleShape,
-                    color = if (ok) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
-                ) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (ok) Icons.Filled.Sensors else Icons.Filled.Warning, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (ok) "${Repo.deviceName.ifBlank { "دستگاه" }}: ${fa(Repo.phone)}" else "شماره دستگاه را وارد کنید",
-                            style = MaterialTheme.typography.labelLarge)
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val accent = MaterialTheme.colorScheme.primary
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 18.dp, top = 14.dp, end = 18.dp, bottom = 112.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("فضای شما", style = MaterialTheme.typography.labelLarge, color = accent)
+                        Text(Repo.appTitle.ifBlank { "خانه هوشمند" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     }
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), accent.copy(alpha = 0.08f)))).border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Waves, null, tint = accent, modifier = Modifier.size(25.dp)) }
                 }
-                Repo.status?.let { msg ->
-                    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                        Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(msg, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            IconButton(onClick = { Repo.status = null }) { Icon(Icons.Filled.Close, "بستن") }
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp))) {
+                    Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(accent.copy(alpha = if (dark) 0.25f else 0.16f), MaterialTheme.colorScheme.surface.copy(alpha = 0.97f), MaterialTheme.colorScheme.surface.copy(alpha = 0.84f)))))
+                    Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f), RoundedCornerShape(30.dp)).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("وضعیت دستگاه", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text(if (Repo.phone.isNotBlank()) "اطلاعات دستگاه آماده است" else "برای شروع، دستگاه را پیکربندی کنید", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Box(Modifier.size(56.dp).clip(RoundedCornerShape(20.dp)).background((if (Repo.phone.isNotBlank()) Color(0xFF22C55E) else MaterialTheme.colorScheme.error).copy(alpha = 0.16f)), contentAlignment = Alignment.Center) { Icon(if (Repo.phone.isNotBlank()) Icons.Filled.Sensors else Icons.Filled.Settings, null, tint = if (Repo.phone.isNotBlank()) Color(0xFF22C55E) else MaterialTheme.colorScheme.error, modifier = Modifier.size(28.dp)) }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            GlassMetric("فرمان‌ها", fa(Repo.items.size.toString()), Icons.Filled.Tune, Modifier.weight(1f))
+                            GlassMetric("مراحل در صف", fa(Repo.pending.size.toString()), Icons.Filled.Schedule, Modifier.weight(1f))
+                        }
+                        Surface(onClick = onSettings, shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.34f))) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Settings, null, tint = accent, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) { Text(Repo.deviceName.ifBlank { "نام دستگاه تنظیم نشده" }, fontWeight = FontWeight.SemiBold); Text(if (Repo.phone.isNotBlank()) fa(Repo.phone) else "افزودن شماره سیم‌کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
+                                Icon(Icons.Filled.ChevronLeft, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                 }
-                if (Repo.items.isEmpty()) Text("هنوز آیتمی نساخته‌اید.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+                Repo.status?.let { msg -> Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) { Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) { Text(msg, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium); IconButton(onClick = { Repo.status = null }) { Icon(Icons.Filled.Close, "بستن") } } } }
+                Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("فرمان‌های شما", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text("برای اجرا، یک فرمان را انتخاب کنید", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Surface(shape = CircleShape, color = accent.copy(alpha = 0.14f), contentColor = accent) { Text(fa(Repo.items.size.toString()), Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge) } }
             }
         }
-        items(Repo.items, key = { it.id }) { item ->
-            ItemCard(item, onRun = { onRun(item) }, onEdit = { onEdit(item) }, onHistory = { onHistory(item) },
-                onCancel = { Engine.cancelRun(ctx, item.id) })
-        }
+        if (Repo.items.isEmpty()) item { Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) { Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) { Icon(Icons.Filled.AddCircleOutline, null, tint = accent, modifier = Modifier.size(42.dp)); Text("هنوز فرمانی نساخته‌اید", fontWeight = FontWeight.Bold); Text("از دکمهٔ + برای ساخت اولین فرمان استفاده کنید", color = MaterialTheme.colorScheme.onSurfaceVariant) } } }
+        items(Repo.items, key = { it.id }) { item -> ItemCard(item, onRun = { onRun(item) }, onEdit = { onEdit(item) }, onHistory = { onHistory(item) }, onCancel = { Engine.cancelRun(ctx, item.id) }) }
+    }
+}
+
+@Composable
+private fun GlassMetric(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.34f))) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) } }
     }
 }
 
 @Composable
 fun ItemCard(item: Item, onRun: () -> Unit, onEdit: () -> Unit, onHistory: () -> Unit, onCancel: () -> Unit) {
-    val c = Color(Palette[item.color % Palette.size])
-    val shape = RoundedCornerShape(28.dp)
-    val src = remember { MutableInteractionSource() }
-    val pressed by src.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.95f else 1f, label = "press")
-    val p = Repo.pending[item.id]
-    Card(
-        shape = shape, elevation = CardDefaults.cardElevation(1.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
-        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }.clip(shape)
-            .clickable(interactionSource = src, indication = LocalIndication.current, onClick = onRun),
-    ) {
-        Box(Modifier.background(Brush.linearGradient(listOf(c.copy(alpha = 0.18f), Color.Transparent)))) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(50.dp).background(c.copy(alpha = 0.2f), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
-                        Icon(IconMap[item.icon] ?: Icons.Filled.Bolt, null, Modifier.size(26.dp), tint = c)
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Box(Modifier.size(38.dp).background(c, CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.PlayArrow, null, tint = Color.White)
-                    }
-                }
-                Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(if (p != null) Icons.Filled.Timer else Icons.Filled.Schedule, null, Modifier.size(14.dp),
-                        tint = if (p != null) c else MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        if (p != null) "مرحله ${fa((p.idx + 1).toString())} ساعت ${fmt(p.at, "HH:mm:ss")}"
-                        else item.schedule.label() ?: "${fa(item.steps.size.toString())} مرحله",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    if (p != null) Icon(Icons.Filled.Close, "لغو", Modifier.size(22.dp).clip(CircleShape).clickable(onClick = onCancel))
-                }
-                Row(Modifier.fillMaxWidth()) {
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = onHistory, Modifier.size(34.dp)) { Icon(Icons.Filled.History, "تاریخچه", Modifier.size(19.dp)) }
-                    IconButton(onClick = onEdit, Modifier.size(34.dp)) { Icon(Icons.Filled.Edit, "ویرایش", Modifier.size(19.dp)) }
-                }
+    val c = Color(Palette[item.color % Palette.size]); val p = Repo.pending[item.id]
+    Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
+            Box(Modifier.size(58.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.copy(alpha = 0.28f), c.copy(alpha = 0.08f)))).border(1.dp, c.copy(alpha = 0.34f), RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) { Icon(IconMap[item.icon] ?: Icons.Filled.Bolt, null, tint = c, modifier = Modifier.size(28.dp)) }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
+                Text(if (p != null) "مرحله " + fa((p.idx + 1).toString()) + " · " + fmt(p.at, "HH:mm:ss") else item.schedule.label() ?: (fa(item.steps.size.toString()) + " مرحله"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Icon(if (p != null) Icons.Filled.Timer else Icons.Filled.Schedule, null, tint = if (p != null) c else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp)); Text(if (p != null) "در حال زمان‌بندی" else "آماده اجرا", style = MaterialTheme.typography.labelSmall, color = if (p != null) c else MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(onClick = onRun, shape = CircleShape, color = c, contentColor = Color.White, modifier = Modifier.size(44.dp)) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.PlayArrow, "اجرا", modifier = Modifier.size(25.dp)) } }
+                Row { IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) { Icon(Icons.Filled.Edit, "ویرایش", modifier = Modifier.size(16.dp)) }; IconButton(onClick = onHistory, modifier = Modifier.size(30.dp)) { Icon(Icons.Filled.History, "تاریخچه", modifier = Modifier.size(16.dp)) } }
+                if (p != null) Icon(Icons.Filled.Close, "لغو", Modifier.size(18.dp).clip(CircleShape).clickable(onClick = onCancel), tint = MaterialTheme.colorScheme.error)
             }
         }
     }
