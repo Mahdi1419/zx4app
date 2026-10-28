@@ -2,6 +2,16 @@
 package ir.smarthome.zx4
 
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.graphics.drawable.Icon
+import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -27,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.delay
 
 @Composable
@@ -86,6 +98,9 @@ private fun EntryCard(e: Entry, now: Long) {
 fun SettingsTab() {
     val ctx = LocalContext.current
     val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { syncDefaultSms(ctx) }
+    var shortcutName by remember { mutableStateOf(Repo.shortcutName) }
+    var shortcutColor by remember { mutableIntStateOf(Repo.accent) }
+    var shortcutStatus by remember { mutableStateOf<String?>(null) }
     val sub = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -109,6 +124,44 @@ fun SettingsTab() {
                         .clickable { Repo.accent = i; Repo.savePrefs() })
                 }
             }
+        }
+        Card2 {
+            Text("آیکون و نام میان‌بر", fontWeight = FontWeight.Bold)
+            Text("اندروید اجازه تغییر نام/آیکون خودِ بستهٔ نصب‌شده را به‌صورت دلخواه نمی‌دهد؛ این گزینه یک میان‌بر سفارشی با نام و آیکون دلخواه روی صفحهٔ اصلی می‌سازد.", style = MaterialTheme.typography.bodySmall, color = sub)
+            OutlinedTextField(shortcutName, { shortcutName = it.take(25); Repo.shortcutName = shortcutName; Repo.savePrefs() },
+                label = { Text("نام میان‌بر") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Palette.forEachIndexed { i, p ->
+                    Box(Modifier.size(34.dp).clip(CircleShape).background(Color(p))
+                        .then(if (shortcutColor == i) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
+                        .clickable { shortcutColor = i })
+                }
+            }
+            Button(onClick = {
+                val sm = ctx.getSystemService(ShortcutManager::class.java)
+                if (Build.VERSION.SDK_INT >= 26 && sm != null && sm.isRequestPinShortcutSupported) {
+                    val size = 192
+                    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bitmap)
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+                    paint.color = Palette[shortcutColor]
+                    canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), 42f, 42f, paint)
+                    paint.color = android.graphics.Color.WHITE
+                    paint.textAlign = Paint.Align.CENTER
+                    paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                    paint.textSize = 88f
+                    val label = shortcutName.trim().ifBlank { "ZX4" }.take(2)
+                    canvas.drawText(label, size / 2f, size * 0.62f, paint)
+                    val intent = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                    val info = ShortcutInfo.Builder(ctx, "zx4-custom-${System.currentTimeMillis()}")
+                        .setShortLabel(shortcutName.trim().ifBlank { "کنترل ZX4" }.take(25))
+                        .setLongLabel(shortcutName.trim().ifBlank { "کنترل ZX4" })
+                        .setIcon(Icon.createWithBitmap(bitmap)).setIntent(intent).build()
+                    runCatching { sm.requestPinShortcut(info, null); shortcutStatus = "درخواست ساخت میان‌بر ارسال شد؛ تأیید نهایی با لانچر گوشی است." }
+                        .onFailure { shortcutStatus = "ساخت میان‌بر ناموفق بود: ${it.message}" }
+                } else shortcutStatus = "لانچر این گوشی ساخت میان‌بر سفارشی را پشتیبانی نمی‌کند."
+            }, modifier = Modifier.fillMaxWidth()) { Text("افزودن میان‌بر به صفحه اصلی") }
+            shortcutStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = sub) }
         }
         Card2 {
             Text("شماره سیم‌کارت دستگاه", fontWeight = FontWeight.Bold)
@@ -150,8 +203,19 @@ fun SettingsTab() {
             Text("برای اینکه زمان‌بندی‌ها و پیامک‌های مرحله‌ای حتی وقتی برنامه بسته است اجرا شوند، بهینه‌سازی باتری را برای این برنامه غیرفعال کنید (گزینه «بدون محدودیت»).",
                 style = MaterialTheme.typography.bodySmall, color = sub)
             OutlinedButton(onClick = {
-                ctx.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-            }) { Text("باز کردن تنظیمات باتری") }
+                val intent = if (Build.VERSION.SDK_INT >= 23)
+                    Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:${ctx.packageName}"))
+                else Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                runCatching { ctx.startActivity(intent) }.onFailure {
+                    ctx.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }
+            }) { Text("درخواست مجازشدن در پس‌زمینه") }
+            if (Build.VERSION.SDK_INT >= 31) {
+                OutlinedButton(onClick = {
+                    runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(Uri.parse("package:${ctx.packageName}"))) }
+                        .onFailure { ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:${ctx.packageName}"))) }
+                }) { Text("اجازه زنگ هشدار دقیق") }
+            }
         }
     }
 }
