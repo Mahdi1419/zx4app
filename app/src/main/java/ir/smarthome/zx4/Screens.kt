@@ -181,7 +181,7 @@ fun SettingsTab() {
                     customBitmap?.recycle()
                     val intent = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                     val info = ShortcutInfo.Builder(ctx, "zx4-custom-${System.currentTimeMillis()}")
-                        .setShortLabel(shortcutName.trim().ifBlank { "کنترل ZX4" }.take(25))
+                        .setShortLabel(shortcutName.trim().ifBlank { "کنترل ZX4" }.take(10))
                         .setLongLabel(shortcutName.trim().ifBlank { "کنترل ZX4" })
                         .setIcon(Icon.createWithBitmap(bitmap)).setIntent(intent).build()
                     runCatching { sm.requestPinShortcut(info, null); shortcutStatus = "درخواست ساخت میان‌بر ارسال شد؛ تأیید نهایی با لانچر گوشی است." }
