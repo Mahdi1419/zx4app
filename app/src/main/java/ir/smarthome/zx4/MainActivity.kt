@@ -62,7 +62,12 @@ class MainActivity : ComponentActivity() {
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 onDispose {}
             }
-            AppTheme(Repo.themeMode, Repo.accent) { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { Root() } }
+            AppTheme(Repo.themeMode, Repo.accent) {
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides LayoutDirection.Rtl,
+                    LocalContentColor provides MaterialTheme.colorScheme.onSurface
+                ) { Root() }
+            }
         }
     }
 }
