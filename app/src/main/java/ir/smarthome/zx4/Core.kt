@@ -32,11 +32,14 @@ object Repo {
     var confirm by mutableStateOf(false)
     var status by mutableStateOf<String?>(null)
     var isDefaultSms by mutableStateOf(false)
+    var gapSec by mutableIntStateOf(20)
+    var lastSent = 0L
 
     fun init(ctx: Context) {
         if (sp != null) return
         val s = ctx.applicationContext.getSharedPreferences("zx4", 0); sp = s
         phone = s.getString("phone", "") ?: ""; confirm = s.getBoolean("confirm", false)
+        gapSec = s.getInt("gap", 20).coerceAtLeast(20); lastSent = s.getLong("last", 0L)
         val raw = s.getString("items2", null)
         if (raw == null) items.addAll(defaults()) else runCatching {
             val a = JSONArray(raw); for (i in 0 until a.length()) items.add(itemFrom(a.getJSONObject(i)))
@@ -62,7 +65,9 @@ object Repo {
     fun item(id: String) = items.firstOrNull { it.id == id }
     private fun ed() = sp!!.edit()
 
-    fun savePrefs() { ed().putString("phone", phone.trim()).putBoolean("confirm", confirm).apply() }
+    fun savePrefs() { ed().putString("phone", phone.trim()).putBoolean("confirm", confirm).putInt("gap", gapSec).apply() }
+    fun waitMs(now: Long = System.currentTimeMillis()): Long = (lastSent + gapSec * 1000L - now).coerceAtLeast(0L)
+    fun markSent(t: Long) { lastSent = t; ed().putLong("last", t).apply() }
     private fun saveItems() { ed().putString("items2", JSONArray().also { a -> items.forEach { a.put(it.toJson()) } }.toString()).apply() }
     private fun saveHistory() { ed().putString("hist", JSONArray().also { a -> history.forEach { a.put(it.toJson()) } }.toString()).apply() }
     private fun savePending() {
@@ -128,10 +133,16 @@ object Engine {
         val item = Repo.item(itemId) ?: return
         val step = item.steps.getOrNull(idx) ?: return
         val now = System.currentTimeMillis()
+        val wait = Repo.waitMs(now)
+        if (wait > 0) { // فاصله حداقلی بین پیامک‌ها هنوز تمام نشده؛ همین مرحله بعداً اجرا می‌شود
+            val at = now + wait
+            setAt(ctx, at, pi(ctx, STEP, itemId, idx, source)); Repo.setPending(itemId, Pending(idx, at)); return
+        }
         val err = try { send(ctx, Repo.phone, step.cmd); null } catch (e: Exception) { e.message ?: "خطا" }
+        if (err == null) Repo.markSent(now)
         Repo.addEntry(Entry(Repo.uid(), item.id, item.name, step.cmd, now, source, err, emptyList()))
         if (err == null && idx + 1 < item.steps.size) {
-            val at = now + step.delaySec * 1000L
+            val at = now + maxOf(step.delaySec, Repo.gapSec) * 1000L
             setAt(ctx, at, pi(ctx, STEP, itemId, idx + 1, source))
             Repo.setPending(itemId, Pending(idx + 1, at))
         } else Repo.clearPending(itemId)

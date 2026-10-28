@@ -82,6 +82,8 @@ fun Root() {
         if (!granted(Manifest.permission.SEND_SMS)) {
             Repo.status = "اجازه ارسال پیامک لازم است"; launcher.launch(perms().toTypedArray()); return
         }
+        val w = Repo.waitMs()
+        if (w > 0) { Repo.status = "فاصله بین پیامک‌ها: ${fa(((w + 999) / 1000).toString())} ثانیه دیگر صبر کنید"; return }
         Engine.start(ctx, item, "manual")
         Repo.status = "«${item.name}» شروع شد" + if (item.steps.size > 1) " (${fa(item.steps.size.toString())} مرحله)" else ""
     }

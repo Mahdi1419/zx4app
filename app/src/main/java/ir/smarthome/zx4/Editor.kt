@@ -128,7 +128,7 @@ fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, o
                         }, label = { Text(t.label) })
                     }
                 }
-                Text("حداقل فاصله بین دو پیامک ۲۰ ثانیه است (طبق راهنمای دستگاه).",
+                Text("حداقل فاصله بین دو پیامک طبق تنظیمات: ${fa(Repo.gapSec.toString())} ثانیه",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
@@ -176,7 +176,7 @@ fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, o
                     onClick = {
                         val out = valid.mapIndexed { i, s ->
                             val sec = if (i == valid.lastIndex) 0
-                            else ((s.value.toDoubleOrNull() ?: 20.0) * (if (s.minutes) 60 else 1)).toInt().coerceAtLeast(20)
+                            else ((s.value.toDoubleOrNull() ?: 20.0) * (if (s.minutes) 60 else 1)).toInt().coerceAtLeast(Repo.gapSec)
                             Step(s.cmd.trim(), sec)
                         }
                         onSave(Item(initial?.id ?: Repo.uid(), name.trim(), icon, color, out, draft()))

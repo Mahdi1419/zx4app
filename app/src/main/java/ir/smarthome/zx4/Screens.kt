@@ -101,6 +101,12 @@ fun SettingsTab() {
             }
         }
         Card2 {
+            Text("حداقل فاصله بین دو پیامک: ${fa(Repo.gapSec.toString())} ثانیه", fontWeight = FontWeight.Bold)
+            Slider(Repo.gapSec.toFloat(), { Repo.gapSec = it.toInt().coerceAtLeast(20); Repo.savePrefs() }, valueRange = 20f..180f)
+            Text("بین هر دو پیامکی که برنامه می‌فرستد، حتی از آیتم‌های مختلف، حداقل این فاصله رعایت می‌شود. کلیک زودتر از این زمان رد می‌شود و مراحل و زمان‌بندی‌های خودکار به‌طور خودکار عقب می‌افتند. فاصله مراحل هر آیتم هم هیچ‌وقت کمتر از این مقدار نمی‌شود.",
+                style = MaterialTheme.typography.bodySmall, color = sub)
+        }
+        Card2 {
             Text("حالت گوشی اختصاصی (برنامه پیش‌فرض SMS)", fontWeight = FontWeight.Bold)
             Text(if (Repo.isDefaultSms) "فعال است ✓ — پاسخ‌های ماژول فقط داخل این برنامه می‌مانند و در برنامه پیام‌ها دیده نمی‌شوند."
                 else "غیرفعال — پاسخ‌های ماژول علاوه بر این برنامه، در برنامه پیام‌های گوشی هم نمایش داده می‌شوند.",
