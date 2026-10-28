@@ -46,9 +46,12 @@ fun HistoryTab(filter: String?, onFilter: (String?) -> Unit) {
     val now by produceState(System.currentTimeMillis()) { while (true) { delay(5000); value = System.currentTimeMillis() } }
     val list = Repo.history.filter { filter == null || it.itemId == filter }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("فعالیت‌ها", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
             Text("تاریخچه", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             if (Repo.history.isNotEmpty()) TextButton(onClick = { Repo.clearHistory() }) { Text("پاک کردن") }
+            }
         }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item { FilterChip(filter == null, { onFilter(null) }, { Text("همه") }) }
@@ -116,6 +119,7 @@ fun SettingsTab() {
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("شخصی‌سازی و کنترل رفتار برنامه", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Card2 {
             Text("شخصی‌سازی", fontWeight = FontWeight.Bold)
             OutlinedTextField(Repo.appTitle, { Repo.appTitle = it.take(30); Repo.savePrefs() }, singleLine = true,
