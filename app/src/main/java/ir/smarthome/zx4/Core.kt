@@ -16,6 +16,9 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Repo.init(this)
+        // Re-arm persisted schedules and in-flight steps whenever Android recreates the app process.
+        Engine.scheduleAll(this)
+        Engine.restorePending(this)
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel("replies", "پاسخ دستگاه", NotificationManager.IMPORTANCE_HIGH))
@@ -38,6 +41,8 @@ object Repo {
     var accent by mutableIntStateOf(0)
     var appTitle by mutableStateOf("خانه هوشمند")
     var deviceName by mutableStateOf("دستگاه")
+    var shortcutName by mutableStateOf("کنترل ZX4")
+    var shortcutIconUri by mutableStateOf("")
 
     fun init(ctx: Context) {
         if (sp != null) return
@@ -46,6 +51,8 @@ object Repo {
         gapSec = s.getInt("gap", 20).coerceIn(1, 300); lastSent = s.getLong("last", 0L)
         themeMode = s.getInt("theme", 0); accent = s.getInt("accent", 0)
         appTitle = s.getString("title", null) ?: "خانه هوشمند"; deviceName = s.getString("dname", null) ?: "دستگاه"
+        shortcutName = s.getString("shortcut_name", null) ?: appTitle.ifBlank { "کنترل ZX4" }
+        shortcutIconUri = s.getString("shortcut_icon_uri", "") ?: ""
         val raw = s.getString("items2", null)
         if (raw == null) items.addAll(defaults()) else runCatching {
             val a = JSONArray(raw); for (i in 0 until a.length()) items.add(itemFrom(a.getJSONObject(i)))
@@ -72,7 +79,8 @@ object Repo {
     private fun ed() = sp!!.edit()
 
     fun savePrefs() { ed().putString("phone", phone.trim()).putBoolean("confirm", confirm).putInt("gap", gapSec)
-        .putInt("theme", themeMode).putInt("accent", accent).putString("title", appTitle).putString("dname", deviceName).apply() }
+        .putInt("theme", themeMode).putInt("accent", accent).putString("title", appTitle).putString("dname", deviceName)
+        .putString("shortcut_name", shortcutName).putString("shortcut_icon_uri", shortcutIconUri).apply() }
     fun waitMs(now: Long = System.currentTimeMillis()): Long = (lastSent + gapSec * 1000L - now).coerceAtLeast(0L)
     fun markSent(t: Long) { lastSent = t; ed().putLong("last", t).apply() }
     private fun saveItems() { ed().putString("items2", JSONArray().also { a -> items.forEach { a.put(it.toJson()) } }.toString()).apply() }
@@ -167,6 +175,19 @@ object Engine {
 
     fun scheduleAll(ctx: Context) = Repo.items.forEach { schedule(ctx, it) }
 
+    /** Rebuild alarms for persisted multi-step work after reboot/process recreation. */
+    fun restorePending(ctx: Context) {
+        val now = System.currentTimeMillis()
+        Repo.pending.toMap().forEach { (id, p) ->
+            val item = Repo.item(id)
+            if (item == null || item.steps.getOrNull(p.idx) == null) {
+                Repo.clearPending(id)
+            } else {
+                setAt(ctx, maxOf(now + 1_000L, p.at), pi(ctx, STEP, id, p.idx, "schedule"))
+            }
+        }
+    }
+
     fun remove(ctx: Context, id: String) { cancelRun(ctx, id); am(ctx).cancel(pi(ctx, SCHED, id, 0, "schedule")) }
 
     fun onAlarm(ctx: Context, intent: Intent) {
@@ -196,7 +217,12 @@ class AlarmReceiver : BroadcastReceiver() {
 }
 
 class BootReceiver : BroadcastReceiver() {
-    override fun onReceive(ctx: Context, intent: Intent) { Repo.init(ctx); Engine.scheduleAll(ctx) }
+    override fun onReceive(ctx: Context, intent: Intent) {
+        Repo.init(ctx)
+        // Wall-clock and timezone changes invalidate future AlarmManager trigger times.
+        Engine.scheduleAll(ctx)
+        Engine.restorePending(ctx)
+    }
 }
 
 class SmsReceiver : BroadcastReceiver() {
