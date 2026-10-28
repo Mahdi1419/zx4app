@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
@@ -20,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -102,6 +102,16 @@ fun SettingsTab() {
     var shortcutColor by remember { mutableIntStateOf(Repo.accent) }
     var shortcutStatus by remember { mutableStateOf<String?>(null) }
     val sub = MaterialTheme.colorScheme.onSurfaceVariant
+    val iconPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                Repo.shortcutIconUri = uri.toString()
+                Repo.savePrefs()
+                shortcutStatus = "آیکون سفارشی انتخاب شد."
+            }.onFailure { shortcutStatus = "ذخیره دسترسی تصویر ناموفق بود: " + it.message }
+        }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Card2 {
@@ -130,6 +140,9 @@ fun SettingsTab() {
             Text("اندروید اجازه تغییر نام/آیکون خودِ بستهٔ نصب‌شده را به‌صورت دلخواه نمی‌دهد؛ این گزینه یک میان‌بر سفارشی با نام و آیکون دلخواه روی صفحهٔ اصلی می‌سازد.", style = MaterialTheme.typography.bodySmall, color = sub)
             OutlinedTextField(shortcutName, { shortcutName = it.take(25); Repo.shortcutName = shortcutName; Repo.savePrefs() },
                 label = { Text("نام میان‌بر") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedButton(onClick = { iconPicker.launch(arrayOf("image/png", "image/jpeg", "image/webp")) }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (Repo.shortcutIconUri.isBlank()) "انتخاب تصویر آیکون از گالری" else "تغییر تصویر آیکون")
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Palette.forEachIndexed { i, p ->
                     Box(Modifier.size(34.dp).clip(CircleShape).background(Color(p))
@@ -141,17 +154,29 @@ fun SettingsTab() {
                 val sm = ctx.getSystemService(ShortcutManager::class.java)
                 if (Build.VERSION.SDK_INT >= 26 && sm != null && sm.isRequestPinShortcutSupported) {
                     val size = 192
+                    val customBitmap = Repo.shortcutIconUri.takeIf { it.isNotBlank() }?.let { raw ->
+                        runCatching {
+                            ctx.contentResolver.openInputStream(Uri.parse(raw))?.use { BitmapFactory.decodeStream(it) }
+                        }.getOrNull()
+                    }
                     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
                     val canvas = Canvas(bitmap)
-                    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-                    paint.color = Palette[shortcutColor]
-                    canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), 42f, 42f, paint)
-                    paint.color = android.graphics.Color.WHITE
-                    paint.textAlign = Paint.Align.CENTER
-                    paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
-                    paint.textSize = 88f
-                    val label = shortcutName.trim().ifBlank { "ZX4" }.take(2)
-                    canvas.drawText(label, size / 2f, size * 0.62f, paint)
+                    if (customBitmap != null) {
+                        val scaled = Bitmap.createScaledBitmap(customBitmap, size, size, true)
+                        canvas.drawBitmap(scaled, 0f, 0f, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+                        if (scaled !== customBitmap) scaled.recycle()
+                    } else {
+                        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+                        paint.color = Palette[shortcutColor]
+                        canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), 42f, 42f, paint)
+                        paint.color = android.graphics.Color.WHITE
+                        paint.textAlign = Paint.Align.CENTER
+                        paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                        paint.textSize = 88f
+                        val label = shortcutName.trim().ifBlank { "ZX4" }.take(2)
+                        canvas.drawText(label, size / 2f, size * 0.62f, paint)
+                    }
+                    customBitmap?.recycle()
                     val intent = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                     val info = ShortcutInfo.Builder(ctx, "zx4-custom-${System.currentTimeMillis()}")
                         .setShortLabel(shortcutName.trim().ifBlank { "کنترل ZX4" }.take(25))
