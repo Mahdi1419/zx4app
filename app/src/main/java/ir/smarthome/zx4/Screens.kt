@@ -2,6 +2,12 @@
 package ir.smarthome.zx4
 
 import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -83,6 +89,27 @@ fun SettingsTab() {
     val sub = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Card2 {
+            Text("شخصی‌سازی", fontWeight = FontWeight.Bold)
+            OutlinedTextField(Repo.appTitle, { Repo.appTitle = it.take(30); Repo.savePrefs() }, singleLine = true,
+                label = { Text("عنوان برنامه (بالای صفحه خانه)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(Repo.deviceName, { Repo.deviceName = it.take(30); Repo.savePrefs() }, singleLine = true,
+                label = { Text("نام دستگاه") }, modifier = Modifier.fillMaxWidth())
+            Text("تم", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("سیستم", "روشن", "تیره").forEachIndexed { i, l ->
+                    FilterChip(Repo.themeMode == i, { Repo.themeMode = i; Repo.savePrefs() }, { Text(l) })
+                }
+            }
+            Text("رنگ اصلی", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Palette.forEachIndexed { i, p ->
+                    Box(Modifier.size(34.dp).clip(CircleShape).background(Color(p))
+                        .then(if (Repo.accent == i) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
+                        .clickable { Repo.accent = i; Repo.savePrefs() })
+                }
+            }
+        }
         Card2 {
             Text("شماره سیم‌کارت دستگاه", fontWeight = FontWeight.Bold)
             OutlinedTextField(Repo.phone, { Repo.phone = it; Repo.savePrefs() }, singleLine = true, placeholder = { Text("09123456789") },

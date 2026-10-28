@@ -29,6 +29,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.activity.SystemBarStyle
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -51,10 +53,16 @@ class MainActivity : ComponentActivity() {
     override fun onResume() { super.onResume(); syncDefaultSms(this) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         Engine.scheduleAll(this)
         setContent {
-            AppTheme { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { Root() } }
+            val dark = Repo.themeMode == 2 || (Repo.themeMode == 0 && isSystemInDarkTheme())
+            DisposableEffect(dark) {
+                val t = android.graphics.Color.TRANSPARENT
+                val style = if (dark) SystemBarStyle.dark(t) else SystemBarStyle.light(t, t)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                onDispose {}
+            }
+            AppTheme(Repo.themeMode, Repo.accent) { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { Root() } }
         }
     }
 }
@@ -89,7 +97,7 @@ fun Root() {
     }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)))) {
+        MaterialTheme.colorScheme.primary.copy(alpha = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) 0.07f else 0.14f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)))) {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
@@ -145,7 +153,7 @@ fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () ->
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("خانه هوشمند", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(Repo.appTitle.ifBlank { "خانه هوشمند" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 val ok = Repo.phone.isNotBlank()
                 Surface(
                     onClick = onSettings, shape = CircleShape,
@@ -154,7 +162,7 @@ fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () ->
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(if (ok) Icons.Filled.Sensors else Icons.Filled.Warning, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(if (ok) "دستگاه: ${fa(Repo.phone)}" else "شماره دستگاه را وارد کنید",
+                        Text(if (ok) "${Repo.deviceName.ifBlank { "دستگاه" }}: ${fa(Repo.phone)}" else "شماره دستگاه را وارد کنید",
                             style = MaterialTheme.typography.labelLarge)
                     }
                 }

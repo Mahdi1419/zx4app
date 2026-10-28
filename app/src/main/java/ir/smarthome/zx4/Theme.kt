@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -13,19 +14,6 @@ val Vazir = FontFamily(
     Font(R.font.vazirmatn_bold, FontWeight.Bold),
     Font(R.font.vazirmatn_bold, FontWeight.SemiBold),
     Font(R.font.vazirmatn_bold, FontWeight.Medium),
-)
-
-private val LightScheme = lightColorScheme(
-    primary = Color(0xFF0F766E), onPrimary = Color.White,
-    primaryContainer = Color(0xFFCCFBF1), onPrimaryContainer = Color(0xFF042F2E),
-    background = Color(0xFFF4F7F7), surface = Color.White,
-    surfaceVariant = Color(0xFFE6ECEC), onSurfaceVariant = Color(0xFF506060),
-)
-private val DarkScheme = darkColorScheme(
-    primary = Color(0xFF5EEAD4), onPrimary = Color(0xFF003731),
-    primaryContainer = Color(0xFF134E4A), onPrimaryContainer = Color(0xFFCCFBF1),
-    background = Color(0xFF0D1314), surface = Color(0xFF162021),
-    surfaceVariant = Color(0xFF223132), onSurfaceVariant = Color(0xFFA9BDBD),
 )
 
 private val base = Typography()
@@ -43,11 +31,39 @@ private val AppTypography = Typography(
     labelSmall = base.labelSmall.copy(fontFamily = Vazir),
 )
 
+/** mode: 0 = سیستم ، 1 = روشن ، 2 = تیره (زغالی خنثی) */
 @Composable
-fun AppTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkScheme else LightScheme,
-        typography = AppTypography,
-        content = content
-    )
+fun AppTheme(mode: Int, accentIdx: Int, content: @Composable () -> Unit) {
+    val dark = mode == 2 || (mode == 0 && isSystemInDarkTheme())
+    val a = Color(Palette[accentIdx % Palette.size])
+    val scheme = if (dark) {
+        val pc = lerp(Color(0xFF2A2A2A), a, 0.35f)
+        darkColorScheme(
+            primary = lerp(a, Color.White, 0.25f), onPrimary = Color(0xFF111111),
+            primaryContainer = pc, onPrimaryContainer = Color(0xFFF2F2F2),
+            secondaryContainer = pc, onSecondaryContainer = Color(0xFFF2F2F2),
+            background = Color(0xFF121212), onBackground = Color(0xFFEDEDED),
+            surface = Color(0xFF1E1E1E), onSurface = Color(0xFFEDEDED),
+            surfaceVariant = Color(0xFF2B2B2B), onSurfaceVariant = Color(0xFFB3B3B3),
+            outline = Color(0xFF6E6E6E), outlineVariant = Color(0xFF3A3A3A), surfaceTint = Color.Transparent,
+            surfaceContainerLowest = Color(0xFF0E0E0E), surfaceContainerLow = Color(0xFF1A1A1A),
+            surfaceContainer = Color(0xFF1E1E1E), surfaceContainerHigh = Color(0xFF262626),
+            surfaceContainerHighest = Color(0xFF2E2E2E),
+        )
+    } else {
+        val pc = lerp(Color.White, a, 0.18f)
+        val onPc = lerp(a, Color.Black, 0.6f)
+        lightColorScheme(
+            primary = a, onPrimary = Color.White,
+            primaryContainer = pc, onPrimaryContainer = onPc,
+            secondaryContainer = pc, onSecondaryContainer = onPc,
+            background = Color(0xFFF4F6F6), surface = Color.White,
+            surfaceVariant = Color(0xFFE9ECEC), onSurfaceVariant = Color(0xFF5A6060),
+            surfaceTint = Color.Transparent,
+            surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF7F8F8),
+            surfaceContainer = Color(0xFFF1F4F4), surfaceContainerHigh = Color(0xFFEBEFEF),
+            surfaceContainerHighest = Color(0xFFE5E9E9),
+        )
+    }
+    MaterialTheme(colorScheme = scheme, typography = AppTypography, content = content)
 }

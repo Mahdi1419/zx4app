@@ -34,12 +34,18 @@ object Repo {
     var isDefaultSms by mutableStateOf(false)
     var gapSec by mutableIntStateOf(20)
     var lastSent = 0L
+    var themeMode by mutableIntStateOf(0)
+    var accent by mutableIntStateOf(0)
+    var appTitle by mutableStateOf("خانه هوشمند")
+    var deviceName by mutableStateOf("دستگاه")
 
     fun init(ctx: Context) {
         if (sp != null) return
         val s = ctx.applicationContext.getSharedPreferences("zx4", 0); sp = s
         phone = s.getString("phone", "") ?: ""; confirm = s.getBoolean("confirm", false)
         gapSec = s.getInt("gap", 20).coerceAtLeast(20); lastSent = s.getLong("last", 0L)
+        themeMode = s.getInt("theme", 0); accent = s.getInt("accent", 0)
+        appTitle = s.getString("title", null) ?: "خانه هوشمند"; deviceName = s.getString("dname", null) ?: "دستگاه"
         val raw = s.getString("items2", null)
         if (raw == null) items.addAll(defaults()) else runCatching {
             val a = JSONArray(raw); for (i in 0 until a.length()) items.add(itemFrom(a.getJSONObject(i)))
@@ -65,7 +71,8 @@ object Repo {
     fun item(id: String) = items.firstOrNull { it.id == id }
     private fun ed() = sp!!.edit()
 
-    fun savePrefs() { ed().putString("phone", phone.trim()).putBoolean("confirm", confirm).putInt("gap", gapSec).apply() }
+    fun savePrefs() { ed().putString("phone", phone.trim()).putBoolean("confirm", confirm).putInt("gap", gapSec)
+        .putInt("theme", themeMode).putInt("accent", accent).putString("title", appTitle).putString("dname", deviceName).apply() }
     fun waitMs(now: Long = System.currentTimeMillis()): Long = (lastSent + gapSec * 1000L - now).coerceAtLeast(0L)
     fun markSent(t: Long) { lastSent = t; ed().putLong("last", t).apply() }
     private fun saveItems() { ed().putString("items2", JSONArray().also { a -> items.forEach { a.put(it.toJson()) } }.toString()).apply() }
@@ -95,7 +102,7 @@ object Repo {
             val e = history[i]; title = e.itemName
             history[i] = e.copy(replies = e.replies + Reply(now, text))
         } else {
-            title = "پیام دستگاه"
+            title = deviceName.ifBlank { "پیام دستگاه" }
             history.add(0, Entry(uid(), null, title, "", now, "device", null, listOf(Reply(now, text))))
         }
         saveHistory(); Engine.notifyUser(ctx, title, text)
