@@ -152,15 +152,17 @@ object Engine {
         val wait = Repo.waitMs(now)
         if (wait > 0) { // فاصله حداقلی بین پیامک‌ها هنوز تمام نشده؛ همین مرحله بعداً اجرا می‌شود
             val at = now + wait
-            setAt(ctx, at, pi(ctx, STEP, itemId, idx, source)); Repo.setPending(itemId, Pending(idx, at)); return
+            Repo.setPending(itemId, Pending(idx, at))
+            setAt(ctx, at, pi(ctx, STEP, itemId, idx, source))
+            return
         }
         val err = try { send(ctx, Repo.phone, step.cmd); null } catch (e: Exception) { e.message ?: "خطا" }
-        if (err == null) Repo.markSent(now)
+        if (err == null) Repo.markSent(System.currentTimeMillis())
         Repo.addEntry(Entry(Repo.uid(), item.id, item.name, step.cmd, now, source, err, emptyList()))
         if (err == null && idx + 1 < item.steps.size) {
             val at = now + maxOf(step.delaySec, Repo.gapSec) * 1000L
-            setAt(ctx, at, pi(ctx, STEP, itemId, idx + 1, source))
             Repo.setPending(itemId, Pending(idx + 1, at))
+            setAt(ctx, at, pi(ctx, STEP, itemId, idx + 1, source))
         } else Repo.clearPending(itemId)
         if (err != null) notifyUser(ctx, item.name, "ارسال ناموفق: $err")
     }
