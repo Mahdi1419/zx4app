@@ -50,7 +50,7 @@ object Repo {
         phone = s.getString("phone", "") ?: ""; confirm = s.getBoolean("confirm", false)
         gapSec = s.getInt("gap", 20).coerceIn(1, 300); lastSent = s.getLong("last", 0L)
         themeMode = s.getInt("theme", 0); accent = s.getInt("accent", 0)
-        appTitle = s.getString("title", null) ?: "خانه هوشمند"; deviceName = s.getString("dname", null) ?: "دستگاه"
+        appTitle = s.getString("title", null) ?: "کنترل ماژول پیامکی"; deviceName = s.getString("dname", null) ?: "دستگاه"
         shortcutName = s.getString("shortcut_name", null) ?: appTitle.ifBlank { "کنترل ZX4" }
         shortcutIconUri = s.getString("shortcut_icon_uri", "") ?: ""
         val raw = s.getString("items2", null)
