@@ -101,7 +101,7 @@ fun Root() {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f), tonalElevation = 0.dp) {
                     listOf("خانه" to Icons.Filled.Home, "تاریخچه" to Icons.Filled.History, "تنظیمات" to Icons.Filled.Settings)
                         .forEachIndexed { i, (l, ic) ->
                             NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = { Icon(ic, l) }, label = { Text(l) })
@@ -152,8 +152,14 @@ fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () ->
         horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(
+                shape = RoundedCornerShape(30.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+            ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(Repo.appTitle.ifBlank { "خانه هوشمند" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("کنترل سریع دستگاه‌ها", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val ok = Repo.phone.isNotBlank()
                 Surface(
                     onClick = onSettings, shape = CircleShape,
@@ -176,6 +182,7 @@ fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () ->
                 }
                 if (Repo.items.isEmpty()) Text("هنوز آیتمی نساخته‌اید.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            }
         }
         items(Repo.items, key = { it.id }) { item ->
             ItemCard(item, onRun = { onRun(item) }, onEdit = { onEdit(item) }, onHistory = { onHistory(item) },
@@ -194,7 +201,8 @@ fun ItemCard(item: Item, onRun: () -> Unit, onEdit: () -> Unit, onHistory: () ->
     val p = Repo.pending[item.id]
     Card(
         shape = shape, elevation = CardDefaults.cardElevation(1.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
         modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }.clip(shape)
             .clickable(interactionSource = src, indication = LocalIndication.current, onClick = onRun),
     ) {
