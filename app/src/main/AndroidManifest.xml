@@ -13,7 +13,7 @@
         android:name=".App"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="کنترل ZX4"
+        android:label="کنترل ماژول پیامکی"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity android:name=".MainActivity" android:exported="true"
