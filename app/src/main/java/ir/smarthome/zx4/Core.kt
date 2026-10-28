@@ -39,7 +39,7 @@ object Repo {
     var lastSent = 0L
     var themeMode by mutableIntStateOf(0)
     var accent by mutableIntStateOf(0)
-    var appTitle by mutableStateOf("خانه هوشمند")
+    var appTitle by mutableStateOf("کنترل ماژول پیامکی")
     var deviceName by mutableStateOf("دستگاه")
     var shortcutName by mutableStateOf("کنترل ZX4")
     var shortcutIconUri by mutableStateOf("")
