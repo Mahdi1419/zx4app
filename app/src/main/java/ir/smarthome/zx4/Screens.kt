@@ -153,7 +153,7 @@ fun SettingsTab() {
                 }
             }
             Button(onClick = {
-                val sm = ctx.getSystemService(ShortcutManager::class.java)
+                val sm = if (Build.VERSION.SDK_INT >= 26) ctx.getSystemService(ShortcutManager::class.java) else null
                 if (Build.VERSION.SDK_INT >= 26 && sm != null && sm.isRequestPinShortcutSupported) {
                     val size = 192
                     val customBitmap = Repo.shortcutIconUri.takeIf { it.isNotBlank() }?.let { raw ->
