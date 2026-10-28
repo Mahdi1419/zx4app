@@ -37,7 +37,8 @@ jobs:
       - name: Show compile errors
         if: failure()
         shell: bash
-        run: grep -E '^e: ' build.log | head -60 || true
+        run: |
+          grep -E '^e: ' build.log | head -60 || truee
 
       - name: Upload build log
         if: failure()
