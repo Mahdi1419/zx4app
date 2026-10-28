@@ -43,7 +43,7 @@ object Repo {
         if (sp != null) return
         val s = ctx.applicationContext.getSharedPreferences("zx4", 0); sp = s
         phone = s.getString("phone", "") ?: ""; confirm = s.getBoolean("confirm", false)
-        gapSec = s.getInt("gap", 20).coerceAtLeast(20); lastSent = s.getLong("last", 0L)
+        gapSec = s.getInt("gap", 20).coerceIn(1, 300); lastSent = s.getLong("last", 0L)
         themeMode = s.getInt("theme", 0); accent = s.getInt("accent", 0)
         appTitle = s.getString("title", null) ?: "خانه هوشمند"; deviceName = s.getString("dname", null) ?: "دستگاه"
         val raw = s.getString("items2", null)
@@ -136,6 +136,7 @@ object Engine {
 
     fun start(ctx: Context, item: Item, source: String) { cancelRun(ctx, item.id); runStep(ctx, item.id, 0, source) }
 
+    @Synchronized
     fun runStep(ctx: Context, itemId: String, idx: Int, source: String) {
         val item = Repo.item(itemId) ?: return
         val step = item.steps.getOrNull(idx) ?: return
