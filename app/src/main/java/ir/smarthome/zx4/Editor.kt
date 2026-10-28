@@ -30,7 +30,7 @@ data class StepUi(val cmd: String, val value: String, val minutes: Boolean)
 
 @Composable
 private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)) {
+    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.32f))) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             content()
@@ -97,7 +97,7 @@ fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, o
 
             Section("مراحل (پیامک‌ها به ترتیب ارسال می‌شوند)") {
                 steps.forEachIndexed { i, s ->
-                    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
+                    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(s.cmd, { steps[i] = s.copy(cmd = it) }, singleLine = true, textStyle = ltr,
                                 label = { Text("پیامک مرحله ${fa((i + 1).toString())}") },
