@@ -37,11 +37,13 @@ fun AppTheme(mode: Int, accentIdx: Int, content: @Composable () -> Unit) {
     val dark = mode == 2 || (mode == 0 && isSystemInDarkTheme())
     val a = Color(Palette[accentIdx % Palette.size])
     val scheme = if (dark) {
-        val pc = lerp(Color(0xFF2A2A2A), a, 0.35f)
+        // Dark mode uses neutral charcoal; the accent must not tint the whole UI green or navy.
+        val charcoal = Color(0xFF303030)
         darkColorScheme(
-            primary = lerp(a, Color.White, 0.25f), onPrimary = Color(0xFF111111),
-            primaryContainer = pc, onPrimaryContainer = Color(0xFFF2F2F2),
-            secondaryContainer = pc, onSecondaryContainer = Color(0xFFF2F2F2),
+            primary = Color(0xFFD6D6D6), onPrimary = Color(0xFF202020),
+            primaryContainer = charcoal, onPrimaryContainer = Color(0xFFF2F2F2),
+            secondary = Color(0xFFBDBDBD), onSecondary = Color(0xFF202020),
+            secondaryContainer = charcoal, onSecondaryContainer = Color(0xFFF2F2F2),
             background = Color(0xFF121212), onBackground = Color(0xFFEDEDED),
             surface = Color(0xFF1E1E1E), onSurface = Color(0xFFEDEDED),
             surfaceVariant = Color(0xFF2B2B2B), onSurfaceVariant = Color(0xFFB3B3B3),
