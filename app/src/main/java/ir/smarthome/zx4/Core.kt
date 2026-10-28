@@ -41,7 +41,7 @@ object Repo {
     var accent by mutableIntStateOf(0)
     var appTitle by mutableStateOf("کنترل ماژول پیامکی")
     var deviceName by mutableStateOf("دستگاه")
-    var shortcutName by mutableStateOf("کنترل ZX4")
+    var shortcutName by mutableStateOf("کنترل ماژول پیامکی")
     var shortcutIconUri by mutableStateOf("")
 
     fun init(ctx: Context) {
