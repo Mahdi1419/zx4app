@@ -30,6 +30,7 @@ private val DarkScheme = darkColorScheme(
 
 private val base = Typography()
 private val AppTypography = Typography(
+    headlineMedium = base.headlineMedium.copy(fontFamily = Vazir),
     headlineSmall = base.headlineSmall.copy(fontFamily = Vazir),
     titleLarge = base.titleLarge.copy(fontFamily = Vazir),
     titleMedium = base.titleMedium.copy(fontFamily = Vazir),

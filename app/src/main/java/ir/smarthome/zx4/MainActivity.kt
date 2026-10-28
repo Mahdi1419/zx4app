@@ -2,388 +2,218 @@ package ir.smarthome.zx4
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
-import java.util.UUID
 
 val Palette = listOf(0xFF0F766E, 0xFF2563EB, 0xFFD97706, 0xFFDC2626, 0xFF7C3AED, 0xFF059669)
 
 val IconMap: Map<String, ImageVector> = linkedMapOf(
-    "bolt" to Icons.Filled.Bolt,
-    "bulb" to Icons.Filled.Lightbulb,
-    "power" to Icons.Filled.PowerSettingsNew,
-    "lock" to Icons.Filled.Lock,
-    "unlock" to Icons.Filled.LockOpen,
-    "home" to Icons.Filled.Home,
-    "fan" to Icons.Filled.Air,
-    "water" to Icons.Filled.WaterDrop,
-    "temp" to Icons.Filled.Thermostat,
-    "sensors" to Icons.Filled.Sensors,
-    "bell" to Icons.Filled.Notifications,
+    "bolt" to Icons.Filled.Bolt, "bulb" to Icons.Filled.Lightbulb, "power" to Icons.Filled.PowerSettingsNew,
+    "lock" to Icons.Filled.Lock, "unlock" to Icons.Filled.LockOpen, "home" to Icons.Filled.Home,
+    "fan" to Icons.Filled.Air, "water" to Icons.Filled.WaterDrop, "temp" to Icons.Filled.Thermostat,
+    "sensors" to Icons.Filled.Sensors, "bell" to Icons.Filled.Notifications,
 )
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        Engine.scheduleAll(this)
         setContent {
-            AppTheme {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Root()
-                }
-            }
+            AppTheme { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { Root() } }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private fun perms() = buildList {
+    add(Manifest.permission.SEND_SMS); add(Manifest.permission.RECEIVE_SMS)
+    if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+}
+
 @Composable
-fun Root(vm: MainVM = viewModel()) {
-    var screen by remember { mutableStateOf("home") }
+fun Root() {
+    val ctx = LocalContext.current
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Item?>(null) }
     var showEditor by remember { mutableStateOf(false) }
-    var pending by remember { mutableStateOf<Item?>(null) }
     var toConfirm by remember { mutableStateOf<Item?>(null) }
-    val ctx = LocalContext.current
+    fun granted(p: String) = ContextCompat.checkSelfPermission(ctx, p) == PackageManager.PERMISSION_GRANTED
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) pending?.let { vm.run(it) } else vm.status = "برای ارسال پیامک باید اجازه دسترسی بدهید"
-        pending = null
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
+    LaunchedEffect(Unit) { perms().filter { !granted(it) }.let { if (it.isNotEmpty()) launcher.launch(it.toTypedArray()) } }
+
+    fun run(item: Item) {
+        if (Repo.phone.isBlank()) { Repo.status = "ابتدا شماره سیم‌کارت دستگاه را در تنظیمات وارد کنید"; return }
+        if (!granted(Manifest.permission.SEND_SMS)) {
+            Repo.status = "اجازه ارسال پیامک لازم است"; launcher.launch(perms().toTypedArray()); return
+        }
+        Engine.start(ctx, item, "manual")
+        Repo.status = "«${item.name}» شروع شد" + if (item.steps.size > 1) " (${fa(item.steps.size.toString())} مرحله)" else ""
     }
 
-    fun trigger(item: Item) {
-        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
-            vm.run(item)
-        } else {
-            pending = item
-            launcher.launch(Manifest.permission.SEND_SMS)
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)))) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                    listOf("خانه" to Icons.Filled.Home, "تاریخچه" to Icons.Filled.History, "تنظیمات" to Icons.Filled.Settings)
+                        .forEachIndexed { i, (l, ic) ->
+                            NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = { Icon(ic, l) }, label = { Text(l) })
+                        }
+                }
+            },
+            floatingActionButton = {
+                if (tab == 0) ExtendedFloatingActionButton(
+                    onClick = { editing = null; showEditor = true }, shape = RoundedCornerShape(20.dp),
+                    icon = { Icon(Icons.Filled.Add, null) }, text = { Text("آیتم جدید") })
+            },
+        ) { pad ->
+            Box(Modifier.padding(pad)) {
+                when (tab) {
+                    0 -> HomeTab(
+                        onEdit = { editing = it; showEditor = true },
+                        onHistory = { filter = it.id; tab = 1 },
+                        onSettings = { tab = 2 },
+                        onRun = { if (Repo.confirm) toConfirm = it else run(it) })
+                    1 -> HistoryTab(filter) { filter = it }
+                    else -> SettingsTab()
+                }
+            }
         }
     }
 
-    BackHandler(screen != "home") { screen = "home" }
-
-    if (screen == "settings") {
-        SettingsScreen(vm) { screen = "home" }
-    } else {
-        HomeScreen(
-            vm,
-            onSettings = { screen = "settings" },
-            onAdd = { editing = null; showEditor = true },
-            onEdit = { editing = it; showEditor = true },
-            onRun = { if (vm.confirm) toConfirm = it else trigger(it) },
-        )
-    }
-
-    if (showEditor) {
-        EditorSheet(
-            initial = editing,
-            onDismiss = { showEditor = false },
-            onSave = { vm.upsert(it); showEditor = false },
-            onDelete = editing?.let { e -> { vm.delete(e.id); showEditor = false } },
-        )
-    }
+    if (showEditor) EditorSheet(
+        initial = editing, onDismiss = { showEditor = false },
+        onSave = { Repo.upsert(it); Engine.schedule(ctx, it); showEditor = false },
+        onDelete = editing?.let { e -> { Engine.remove(ctx, e.id); Repo.delete(e.id); showEditor = false } })
 
     toConfirm?.let { item ->
         AlertDialog(
-            onDismissRequest = { toConfirm = null },
+            onDismissRequest = { toConfirm = null }, shape = RoundedCornerShape(28.dp),
             title = { Text(item.name) },
-            text = { Text("${item.commands.size} پیامک به شماره ${vm.phone} ارسال شود؟") },
-            confirmButton = { TextButton(onClick = { toConfirm = null; trigger(item) }) { Text("ارسال") } },
-            dismissButton = { TextButton(onClick = { toConfirm = null }) { Text("انصراف") } },
-        )
+            text = { Text("${fa(item.steps.size.toString())} پیامک به شماره ${Repo.phone} ارسال شود؟") },
+            confirmButton = { TextButton(onClick = { toConfirm = null; run(item) }) { Text("ارسال") } },
+            dismissButton = { TextButton(onClick = { toConfirm = null }) { Text("انصراف") } })
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    vm: MainVM,
-    onSettings: () -> Unit,
-    onAdd: () -> Unit,
-    onEdit: (Item) -> Unit,
-    onRun: (Item) -> Unit,
-) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("کنترل هوشمند", fontWeight = FontWeight.Bold) },
-                actions = { IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "تنظیمات") } },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAdd,
-                icon = { Icon(Icons.Filled.Add, null) },
-                text = { Text("آیتم جدید") },
-            )
-        },
-    ) { pad ->
-        Column(Modifier.padding(pad).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (vm.phone.isBlank()) {
-                Card(
-                    onClick = onSettings,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    shape = RoundedCornerShape(20.dp),
+fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () -> Unit, onRun: (Item) -> Unit) {
+    val ctx = LocalContext.current
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("خانه هوشمند", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                val ok = Repo.phone.isNotBlank()
+                Surface(
+                    onClick = onSettings, shape = CircleShape,
+                    color = if (ok) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Filled.Settings, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text("شماره سیم‌کارت دستگاه را در تنظیمات وارد کنید",
-                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (ok) Icons.Filled.Sensors else Icons.Filled.Warning, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (ok) "دستگاه: ${fa(Repo.phone)}" else "شماره دستگاه را وارد کنید",
+                            style = MaterialTheme.typography.labelLarge)
                     }
                 }
-            }
-            vm.status?.let { msg ->
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Column {
-                        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
+                Repo.status?.let { msg ->
+                    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                        Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(msg, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            if (vm.sending) TextButton(onClick = { vm.cancel() }) { Text("لغو") }
-                            else IconButton(onClick = { vm.status = null }) { Icon(Icons.Filled.Close, "بستن") }
+                            IconButton(onClick = { Repo.status = null }) { Icon(Icons.Filled.Close, "بستن") }
                         }
-                        if (vm.sending) LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
                 }
+                if (Repo.items.isEmpty()) Text("هنوز آیتمی نساخته‌اید.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (vm.items.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("هنوز آیتمی نساخته‌اید.\nبا دکمه «آیتم جدید» شروع کنید.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 96.dp),
-            ) {
-                items(vm.items, key = { it.id }) { item ->
-                    ItemCard(item, onClick = { onRun(item) }, onLong = { onEdit(item) })
-                }
-            }
+        }
+        items(Repo.items, key = { it.id }) { item ->
+            ItemCard(item, onRun = { onRun(item) }, onEdit = { onEdit(item) }, onHistory = { onHistory(item) },
+                onCancel = { Engine.cancelRun(ctx, item.id) })
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ItemCard(item: Item, onClick: () -> Unit, onLong: () -> Unit) {
+fun ItemCard(item: Item, onRun: () -> Unit, onEdit: () -> Unit, onHistory: () -> Unit, onCancel: () -> Unit) {
     val c = Color(Palette[item.color % Palette.size])
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(28.dp)
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.95f else 1f, label = "press")
+    val p = Repo.pending[item.id]
     Card(
-        shape = shape,
+        shape = shape, elevation = CardDefaults.cardElevation(1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp),
-        modifier = Modifier.fillMaxWidth().clip(shape).combinedClickable(onClick = onClick, onLongClick = onLong),
+        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }.clip(shape)
+            .clickable(interactionSource = src, indication = LocalIndication.current, onClick = onRun),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(48.dp).background(c.copy(alpha = 0.15f), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(IconMap[item.icon] ?: Icons.Filled.Bolt, null, tint = c)
-            }
-            Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                maxLines = 2, minLines = 2)
-            Text("${item.commands.size} دستور • نگه‌داشتن برای ویرایش",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, onDelete: (() -> Unit)?) {
-    var name by remember { mutableStateOf(initial?.name ?: "") }
-    var icon by remember { mutableStateOf(initial?.icon ?: "bolt") }
-    var color by remember { mutableIntStateOf(initial?.color ?: 0) }
-    val cmds = remember { mutableStateListOf<String>().apply { addAll(initial?.commands ?: listOf("")) } }
-    val ltr = LocalTextStyleLtr()
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(if (initial == null) "آیتم جدید" else "ویرایش آیتم",
-                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            OutlinedTextField(name, { name = it }, label = { Text("نام آیتم") }, singleLine = true,
-                modifier = Modifier.fillMaxWidth())
-
-            Text("آیکون", style = MaterialTheme.typography.labelLarge)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(IconMap.keys.toList()) { k ->
-                    val sel = k == icon
-                    Box(
-                        Modifier.size(46.dp).clip(CircleShape)
-                            .background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { icon = k },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(IconMap[k]!!, null,
-                            tint = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(Modifier.background(Brush.linearGradient(listOf(c.copy(alpha = 0.18f), Color.Transparent)))) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(50.dp).background(c.copy(alpha = 0.2f), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+                        Icon(IconMap[item.icon] ?: Icons.Filled.Bolt, null, Modifier.size(26.dp), tint = c)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Box(Modifier.size(38.dp).background(c, CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.PlayArrow, null, tint = Color.White)
                     }
                 }
-            }
-
-            Text("رنگ", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Palette.forEachIndexed { i, p ->
-                    Box(
-                        Modifier.size(34.dp).clip(CircleShape).background(Color(p))
-                            .then(if (i == color) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-                            .clickable { color = i }
-                    )
-                }
-            }
-
-            Text("پیامک‌ها (به ترتیب ارسال می‌شوند)", style = MaterialTheme.typography.labelLarge)
-            cmds.forEachIndexed { i, c ->
-                OutlinedTextField(
-                    value = c, onValueChange = { cmds[i] = it }, singleLine = true,
-                    label = { Text("پیامک ${i + 1}") }, textStyle = ltr,
-                    trailingIcon = {
-                        if (cmds.size > 1) IconButton(onClick = { cmds.removeAt(i) }) { Icon(Icons.Filled.Close, "حذف") }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            TextButton(onClick = { cmds.add("") }) {
-                Icon(Icons.Filled.Add, null); Spacer(Modifier.width(6.dp)); Text("افزودن پیامک")
-            }
-
-            Text("دستورهای آماده", style = MaterialTheme.typography.labelLarge)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(Templates) { t ->
-                    AssistChip(onClick = {
-                        if (cmds.size == 1 && cmds[0].isBlank()) cmds[0] = t.cmd else cmds.add(t.cmd)
-                        if (name.isBlank()) name = t.label
-                    }, label = { Text(t.label) })
-                }
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = {
-                        val list = cmds.map { it.trim() }.filter { it.isNotEmpty() }
-                        onSave(Item(initial?.id ?: UUID.randomUUID().toString(), name.trim(), icon, color, list))
-                    },
-                    enabled = name.isNotBlank() && cmds.any { it.isNotBlank() },
-                    modifier = Modifier.weight(1f),
-                ) { Text("ذخیره") }
-                if (onDelete != null) {
-                    OutlinedButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.Delete, null); Spacer(Modifier.width(6.dp)); Text("حذف")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LocalTextStyleLtr() = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr)
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SettingsScreen(vm: MainVM, onBack: () -> Unit) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("تنظیمات", fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "بازگشت") } },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-            )
-        },
-    ) { pad ->
-        Column(
-            Modifier.padding(pad).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            SettingCard {
-                Text("شماره سیم‌کارت دستگاه", fontWeight = FontWeight.Bold)
-                OutlinedTextField(
-                    value = vm.phone, onValueChange = { vm.phone = it; vm.savePrefs() },
-                    singleLine = true, placeholder = { Text("09123456789") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    textStyle = LocalTextStyleLtr(), modifier = Modifier.fillMaxWidth(),
-                )
-                Text("سیم‌کارت داخل دستگاه نباید پین‌کد داشته باشد و شماره شما باید به‌عنوان مدیر در دستگاه ثبت شده باشد.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            SettingCard {
-                Text("فاصله بین پیامک‌ها: ${vm.delaySec} ثانیه", fontWeight = FontWeight.Bold)
-                Slider(
-                    value = vm.delaySec.toFloat(), onValueChange = { vm.delaySec = it.toInt(); vm.savePrefs() },
-                    valueRange = 20f..60f,
-                )
-                Text("طبق راهنمای دستگاه، فاصله ارسال هر پیامک حداقل ۲۰ ثانیه است. این مقدار فقط برای آیتم‌هایی با چند پیامک اعمال می‌شود.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            SettingCard {
+                Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("تأیید قبل از ارسال", fontWeight = FontWeight.Bold)
-                        Text("قبل از ارسال هر آیتم پرسیده شود",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = vm.confirm, onCheckedChange = { vm.confirm = it; vm.savePrefs() })
+                    Icon(if (p != null) Icons.Filled.Timer else Icons.Filled.Schedule, null, Modifier.size(14.dp),
+                        tint = if (p != null) c else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        if (p != null) "مرحله ${fa((p.idx + 1).toString())} ساعت ${fmt(p.at, "HH:mm:ss")}"
+                        else item.schedule.label() ?: "${fa(item.steps.size.toString())} مرحله",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (p != null) Icon(Icons.Filled.Close, "لغو", Modifier.size(22.dp).clip(CircleShape).clickable(onClick = onCancel))
+                }
+                Row(Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onHistory, Modifier.size(34.dp)) { Icon(Icons.Filled.History, "تاریخچه", Modifier.size(19.dp)) }
+                    IconButton(onClick = onEdit, Modifier.size(34.dp)) { Icon(Icons.Filled.Edit, "ویرایش", Modifier.size(19.dp)) }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SettingCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
