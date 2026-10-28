@@ -41,16 +41,16 @@ fun AppTheme(mode: Int, accentIdx: Int, content: @Composable () -> Unit) {
         val charcoal = Color(0xFF303030)
         darkColorScheme(
             primary = Color(0xFFD6D6D6), onPrimary = Color(0xFF202020),
-            primaryContainer = charcoal, onPrimaryContainer = Color(0xFFF2F2F2),
+            primaryContainer = Color(0xFF393939), onPrimaryContainer = Color(0xFFF5F5F5),
             secondary = Color(0xFFBDBDBD), onSecondary = Color(0xFF202020),
-            secondaryContainer = charcoal, onSecondaryContainer = Color(0xFFF2F2F2),
-            background = Color(0xFF121212), onBackground = Color(0xFFEDEDED),
-            surface = Color(0xFF1E1E1E), onSurface = Color(0xFFEDEDED),
-            surfaceVariant = Color(0xFF2B2B2B), onSurfaceVariant = Color(0xFFB3B3B3),
-            outline = Color(0xFF6E6E6E), outlineVariant = Color(0xFF3A3A3A), surfaceTint = Color.Transparent,
-            surfaceContainerLowest = Color(0xFF0E0E0E), surfaceContainerLow = Color(0xFF1A1A1A),
-            surfaceContainer = Color(0xFF1E1E1E), surfaceContainerHigh = Color(0xFF262626),
-            surfaceContainerHighest = Color(0xFF2E2E2E),
+            secondaryContainer = Color(0xFF393939), onSecondaryContainer = Color(0xFFF5F5F5),
+            background = Color(0xFF101114), onBackground = Color(0xFFF4F4F6),
+            surface = Color(0xFF202126), onSurface = Color(0xFFF4F4F6),
+            surfaceVariant = Color(0xFF303137), onSurfaceVariant = Color(0xFFC2C3CC),
+            outline = Color(0xFF858690), outlineVariant = Color(0xFF41424A), surfaceTint = Color.Transparent,
+            surfaceContainerLowest = Color(0xFF111216), surfaceContainerLow = Color(0xFF191A20),
+            surfaceContainer = Color(0xFF202126), surfaceContainerHigh = Color(0xFF292A31),
+            surfaceContainerHighest = Color(0xFF34353D),
         )
     } else {
         val pc = lerp(Color.White, a, 0.18f)
