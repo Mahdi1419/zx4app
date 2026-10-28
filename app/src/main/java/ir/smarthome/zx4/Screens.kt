@@ -169,7 +169,7 @@ fun SettingsTab() {
                         if (scaled !== customBitmap) scaled.recycle()
                     } else {
                         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-                        paint.color = Palette[shortcutColor]
+                        paint.color = Palette[shortcutColor].toInt()
                         canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), 42f, 42f, paint)
                         paint.color = android.graphics.Color.WHITE
                         paint.textAlign = Paint.Align.CENTER
