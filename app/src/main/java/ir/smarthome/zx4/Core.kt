@@ -51,7 +51,7 @@ object Repo {
         gapSec = s.getInt("gap", 20).coerceIn(1, 300); lastSent = s.getLong("last", 0L)
         themeMode = s.getInt("theme", 0); accent = s.getInt("accent", 0)
         appTitle = s.getString("title", null) ?: "کنترل ماژول پیامکی"; deviceName = s.getString("dname", null) ?: "دستگاه"
-        shortcutName = s.getString("shortcut_name", null) ?: appTitle.ifBlank { "کنترل ZX4" }
+        shortcutName = s.getString("shortcut_name", null) ?: appTitle.ifBlank { "کنترل ماژول پیامکی" }
         shortcutIconUri = s.getString("shortcut_icon_uri", "") ?: ""
         val raw = s.getString("items2", null)
         if (raw == null) items.addAll(defaults()) else runCatching {
