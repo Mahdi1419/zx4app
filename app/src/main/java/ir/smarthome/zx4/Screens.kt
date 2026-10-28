@@ -128,9 +128,9 @@ fun SettingsTab() {
             }
         }
         Card2 {
-            Text("حداقل فاصله بین دو پیامک: ${fa(Repo.gapSec.toString())} ثانیه", fontWeight = FontWeight.Bold)
-            Slider(Repo.gapSec.toFloat(), { Repo.gapSec = it.toInt().coerceAtLeast(20); Repo.savePrefs() }, valueRange = 20f..180f)
-            Text("بین هر دو پیامکی که برنامه می‌فرستد، حتی از آیتم‌های مختلف، حداقل این فاصله رعایت می‌شود. کلیک زودتر از این زمان رد می‌شود و مراحل و زمان‌بندی‌های خودکار به‌طور خودکار عقب می‌افتند. فاصله مراحل هر آیتم هم هیچ‌وقت کمتر از این مقدار نمی‌شود.",
+            Text("فاصله اجباری بین دستورها: ${fa(Repo.gapSec.toString())} ثانیه", fontWeight = FontWeight.Bold)
+            Slider(Repo.gapSec.toFloat(), { Repo.gapSec = it.toInt().coerceIn(1, 300); Repo.savePrefs() }, valueRange = 1f..300f)
+            Text("بین هر دو پیامکی که برنامه می‌فرستد، حتی از آیتم‌های مختلف، حداقل این فاصله رعایت می‌شود. اجرای هم‌زمان مهار می‌شود؛ کلیک دستی زودتر از موعد رد می‌شود و مراحل خودکار در صورت نیاز عقب می‌افتند. فاصله مراحل هر آیتم هم هیچ‌وقت کمتر از این مقدار نخواهد بود. بازه قابل تنظیم: ۱ تا ۳۰۰ ثانیه.",
                 style = MaterialTheme.typography.bodySmall, color = sub)
         }
         Card2 {
