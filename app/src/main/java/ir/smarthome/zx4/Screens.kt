@@ -1,6 +1,9 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package ir.smarthome.zx4
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -76,9 +79,7 @@ private fun EntryCard(e: Entry, now: Long) {
 @Composable
 fun SettingsTab() {
     val ctx = LocalContext.current
-    @Composable fun Card2(content: @Composable ColumnScope.() -> Unit) = Card(
-        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content) }
+    val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { syncDefaultSms(ctx) }
     val sub = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -100,6 +101,18 @@ fun SettingsTab() {
             }
         }
         Card2 {
+            Text("حالت گوشی اختصاصی (برنامه پیش‌فرض SMS)", fontWeight = FontWeight.Bold)
+            Text(if (Repo.isDefaultSms) "فعال است ✓ — پاسخ‌های ماژول فقط داخل این برنامه می‌مانند و در برنامه پیام‌ها دیده نمی‌شوند."
+                else "غیرفعال — پاسخ‌های ماژول علاوه بر این برنامه، در برنامه پیام‌های گوشی هم نمایش داده می‌شوند.",
+                style = MaterialTheme.typography.bodySmall, color = sub)
+            Text("توجه: وقتی فعال باشد، این برنامه تمام پیامک‌های گوشی را دریافت می‌کند. پیامک‌های غیر از ماژول در صندوق سیستم ذخیره و با نوتیفیکیشن اعلام می‌شوند، اما این برنامه صفحه پیام‌رسانی ندارد؛ پس فقط برای گوشی اختصاصی مناسب است.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Button(onClick = {
+                if (Repo.isDefaultSms) ctx.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+                else { setSmsComponents(ctx, true); smsLauncher.launch(defaultSmsIntent(ctx)) }
+            }) { Text(if (Repo.isDefaultSms) "بازگرداندن برنامه پیام‌ها (از تنظیمات سیستم)" else "فعال‌سازی") }
+        }
+        Card2 {
             Text("اجرای زمان‌بندی در پس‌زمینه", fontWeight = FontWeight.Bold)
             Text("برای اینکه زمان‌بندی‌ها و پیامک‌های مرحله‌ای حتی وقتی برنامه بسته است اجرا شوند، بهینه‌سازی باتری را برای این برنامه غیرفعال کنید (گزینه «بدون محدودیت»).",
                 style = MaterialTheme.typography.bodySmall, color = sub)
@@ -107,5 +120,12 @@ fun SettingsTab() {
                 ctx.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             }) { Text("باز کردن تنظیمات باتری") }
         }
+    }
+}
+
+@Composable
+private fun Card2(content: @Composable ColumnScope.() -> Unit) {
+    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }

@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package ir.smarthome.zx4
 
 import androidx.compose.foundation.background

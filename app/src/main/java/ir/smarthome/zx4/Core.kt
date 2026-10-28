@@ -31,6 +31,7 @@ object Repo {
     var phone by mutableStateOf("")
     var confirm by mutableStateOf(false)
     var status by mutableStateOf<String?>(null)
+    var isDefaultSms by mutableStateOf(false)
 
     fun init(ctx: Context) {
         if (sp != null) return
@@ -75,7 +76,7 @@ object Repo {
     fun clearPending(id: String) { if (pending.remove(id) != null) savePending() }
     fun clearHistory() { history.clear(); saveHistory() }
 
-    fun addEntry(e: Entry) { history.add(0, e); while (history.size > 300) history.removeLast(); saveHistory() }
+    fun addEntry(e: Entry) { history.add(0, e); while (history.size > 300) history.removeAt(history.lastIndex); saveHistory() }
 
     private fun tail(s: String) = s.filter { it.isDigit() }.takeLast(10)
     fun isDevice(from: String?) = phone.isNotBlank() && from != null && tail(from) == tail(phone)
@@ -182,6 +183,7 @@ class BootReceiver : BroadcastReceiver() {
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Repo.init(ctx)
+        if (isDefaultSms(ctx)) return
         val msgs = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
         if (msgs.isEmpty() || !Repo.isDevice(msgs[0].originatingAddress)) return
         Repo.onReply(ctx, msgs.joinToString("") { it.messageBody ?: "" })

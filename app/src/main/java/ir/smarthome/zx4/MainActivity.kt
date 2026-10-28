@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package ir.smarthome.zx4
 
 import android.Manifest
@@ -46,6 +47,7 @@ val IconMap: Map<String, ImageVector> = linkedMapOf(
 )
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() { super.onResume(); syncDefaultSms(this) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -74,7 +76,7 @@ fun Root() {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
     LaunchedEffect(Unit) { perms().filter { !granted(it) }.let { if (it.isNotEmpty()) launcher.launch(it.toTypedArray()) } }
 
-    fun run(item: Item) {
+    fun trigger(item: Item) {
         if (Repo.phone.isBlank()) { Repo.status = "ابتدا شماره سیم‌کارت دستگاه را در تنظیمات وارد کنید"; return }
         if (!granted(Manifest.permission.SEND_SMS)) {
             Repo.status = "اجازه ارسال پیامک لازم است"; launcher.launch(perms().toTypedArray()); return
@@ -107,7 +109,7 @@ fun Root() {
                         onEdit = { editing = it; showEditor = true },
                         onHistory = { filter = it.id; tab = 1 },
                         onSettings = { tab = 2 },
-                        onRun = { if (Repo.confirm) toConfirm = it else run(it) })
+                        onRun = { item -> if (Repo.confirm) { toConfirm = item } else { trigger(item) } })
                     1 -> HistoryTab(filter) { filter = it }
                     else -> SettingsTab()
                 }
@@ -125,7 +127,7 @@ fun Root() {
             onDismissRequest = { toConfirm = null }, shape = RoundedCornerShape(28.dp),
             title = { Text(item.name) },
             text = { Text("${fa(item.steps.size.toString())} پیامک به شماره ${Repo.phone} ارسال شود؟") },
-            confirmButton = { TextButton(onClick = { toConfirm = null; run(item) }) { Text("ارسال") } },
+            confirmButton = { TextButton(onClick = { toConfirm = null; trigger(item) }) { Text("ارسال") } },
             dismissButton = { TextButton(onClick = { toConfirm = null }) { Text("انصراف") } })
     }
 }
