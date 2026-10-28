@@ -66,7 +66,9 @@ fun HistoryTab(filter: String?, onFilter: (String?) -> Unit) {
 @Composable
 private fun EntryCard(e: Entry, now: Long) {
     val sub = MaterialTheme.colorScheme.onSurfaceVariant
-    Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(e.itemName, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -138,7 +140,7 @@ fun SettingsTab() {
         Card2 {
             Text("آیکون و نام میان‌بر", fontWeight = FontWeight.Bold)
             Text("اندروید اجازه تغییر نام/آیکون خودِ بستهٔ نصب‌شده را به‌صورت دلخواه نمی‌دهد؛ این گزینه یک میان‌بر سفارشی با نام و آیکون دلخواه روی صفحهٔ اصلی می‌سازد.", style = MaterialTheme.typography.bodySmall, color = sub)
-            OutlinedTextField(shortcutName, { shortcutName = it.take(25); Repo.shortcutName = shortcutName; Repo.savePrefs() },
+            OutlinedTextField(shortcutName, { value -> shortcutName = value.take(25); Repo.shortcutName = value.take(25); Repo.savePrefs() },
                 label = { Text("نام میان‌بر") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedButton(onClick = { iconPicker.launch(arrayOf("image/png", "image/jpeg", "image/webp")) }, modifier = Modifier.fillMaxWidth()) {
                 Text(if (Repo.shortcutIconUri.isBlank()) "انتخاب تصویر آیکون از گالری" else "تغییر تصویر آیکون")
@@ -247,7 +249,9 @@ fun SettingsTab() {
 
 @Composable
 private fun Card2(content: @Composable ColumnScope.() -> Unit) {
-    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f))) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
