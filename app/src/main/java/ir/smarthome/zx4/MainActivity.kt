@@ -182,7 +182,7 @@ fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("فضای شما", style = MaterialTheme.typography.labelLarge, color = accent)
-                        Text(Repo.appTitle.ifBlank { "خانه هوشمند" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Text(Repo.appTitle.ifBlank { "کنترل ماژول پیامکی" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     }
                     Box(Modifier.size(48.dp).clip(CircleShape).background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), accent.copy(alpha = 0.08f)))).border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Waves, null, tint = accent, modifier = Modifier.size(25.dp)) }
                 }
