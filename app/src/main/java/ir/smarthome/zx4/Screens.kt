@@ -103,36 +103,24 @@ private fun EntryCard(e: Entry, now: Long) {
 fun SettingsTab() {
     val ctx = LocalContext.current
     val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { syncDefaultSms(ctx) }
-    var shortcutName by remember { mutableStateOf(Repo.shortcutName) }
-    var shortcutColor by remember { mutableIntStateOf(Repo.accent) }
-    var shortcutStatus by remember { mutableStateOf<String?>(null) }
     val sub = MaterialTheme.colorScheme.onSurfaceVariant
-    val iconPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            runCatching {
-                ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                Repo.shortcutIconUri = uri.toString()
-                Repo.savePrefs()
-                shortcutStatus = "آیکون سفارشی انتخاب شد."
-            }.onFailure { shortcutStatus = "ذخیره دسترسی تصویر ناموفق بود: " + it.message }
-        }
-    }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("شخصی‌سازی و کنترل رفتار برنامه", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("شخصی‌سازی و کنترل رفتار برنامه", style = MaterialTheme.typography.bodyMedium, color = sub)
         Card2 {
             Text("شخصی‌سازی", fontWeight = FontWeight.Bold)
             OutlinedTextField(Repo.appTitle, { Repo.appTitle = it.take(30); Repo.savePrefs() }, singleLine = true,
-                label = { Text("عنوان برنامه (بالای صفحه خانه)") }, modifier = Modifier.fillMaxWidth())
+                label = { Text("عنوان برنامه") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(Repo.deviceName, { Repo.deviceName = it.take(30); Repo.savePrefs() }, singleLine = true,
                 label = { Text("نام دستگاه") }, modifier = Modifier.fillMaxWidth())
             Text("تم", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("سیستم", "روشن", "تیره").forEachIndexed { i, l ->
-                    FilterChip(Repo.themeMode == i, { Repo.themeMode = i; Repo.savePrefs() }, { Text(l) })
+                listOf("سیستم", "روشن", "زغالی تیره").forEachIndexed { i, label ->
+                    FilterChip(Repo.themeMode == i, { Repo.themeMode = i; Repo.savePrefs() }, { Text(label) })
                 }
             }
-            Text("رنگ اصلی", style = MaterialTheme.typography.labelLarge)
+            Text("رنگ تأکیدی", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Palette.forEachIndexed { i, p ->
                     Box(Modifier.size(34.dp).clip(CircleShape).background(Color(p))
@@ -142,65 +130,17 @@ fun SettingsTab() {
             }
         }
         Card2 {
-            Text("آیکون و نام میان‌بر", fontWeight = FontWeight.Bold)
-            Text("اندروید اجازه تغییر نام/آیکون خودِ بستهٔ نصب‌شده را به‌صورت دلخواه نمی‌دهد؛ این گزینه یک میان‌بر سفارشی با نام و آیکون دلخواه روی صفحهٔ اصلی می‌سازد.", style = MaterialTheme.typography.bodySmall, color = sub)
-            OutlinedTextField(shortcutName, { value -> shortcutName = value.take(25); Repo.shortcutName = value.take(25); Repo.savePrefs() },
-                label = { Text("نام میان‌بر") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedButton(onClick = { iconPicker.launch(arrayOf("image/png", "image/jpeg", "image/webp")) }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (Repo.shortcutIconUri.isBlank()) "انتخاب تصویر آیکون از گالری" else "تغییر تصویر آیکون")
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Palette.forEachIndexed { i, p ->
-                    Box(Modifier.size(34.dp).clip(CircleShape).background(Color(p))
-                        .then(if (shortcutColor == i) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-                        .clickable { shortcutColor = i })
-                }
-            }
-            Button(onClick = {
-                val sm = if (Build.VERSION.SDK_INT >= 26) ctx.getSystemService(ShortcutManager::class.java) else null
-                if (Build.VERSION.SDK_INT >= 26 && sm != null && sm.isRequestPinShortcutSupported) {
-                    val size = 192
-                    val customBitmap = Repo.shortcutIconUri.takeIf { it.isNotBlank() }?.let { raw ->
-                        runCatching {
-                            ctx.contentResolver.openInputStream(Uri.parse(raw))?.use { BitmapFactory.decodeStream(it) }
-                        }.getOrNull()
-                    }
-                    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
-                    if (customBitmap != null) {
-                        val scaled = Bitmap.createScaledBitmap(customBitmap, size, size, true)
-                        canvas.drawBitmap(scaled, 0f, 0f, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
-                        if (scaled !== customBitmap) scaled.recycle()
-                    } else {
-                        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-                        paint.color = Palette[shortcutColor].toInt()
-                        canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), 42f, 42f, paint)
-                        paint.color = android.graphics.Color.WHITE
-                        paint.textAlign = Paint.Align.CENTER
-                        paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
-                        paint.textSize = 88f
-                        val label = shortcutName.trim().ifBlank { "ZX4" }.take(2)
-                        canvas.drawText(label, size / 2f, size * 0.62f, paint)
-                    }
-                    customBitmap?.recycle()
-                    val intent = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-                    val info = ShortcutInfo.Builder(ctx, "zx4-custom-${System.currentTimeMillis()}")
-                        .setShortLabel(shortcutName.trim().ifBlank { "کنترل ZX4" }.take(10))
-                        .setLongLabel(shortcutName.trim().ifBlank { "کنترل ZX4" })
-                        .setIcon(Icon.createWithBitmap(bitmap)).setIntent(intent).build()
-                    runCatching { sm.requestPinShortcut(info, null); shortcutStatus = "درخواست ساخت میان‌بر ارسال شد؛ تأیید نهایی با لانچر گوشی است." }
-                        .onFailure { shortcutStatus = "ساخت میان‌بر ناموفق بود: ${it.message}" }
-                } else shortcutStatus = "لانچر این گوشی ساخت میان‌بر سفارشی را پشتیبانی نمی‌کند."
-            }, modifier = Modifier.fillMaxWidth()) { Text("افزودن میان‌بر به صفحه اصلی") }
-            shortcutStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = sub) }
+            Text("ویجت صفحه اصلی", fontWeight = FontWeight.Bold)
+            Text("ویجت اندروید باید به‌صورت جداگانه پیاده‌سازی شود تا انتخاب آیتم‌ها، اجرای فرمان و نمایش وضعیت را پشتیبانی کند.",
+                style = MaterialTheme.typography.bodySmall, color = sub)
         }
         Card2 {
             Text("شماره سیم‌کارت دستگاه", fontWeight = FontWeight.Bold)
-            OutlinedTextField(Repo.phone, { Repo.phone = it; Repo.savePrefs() }, singleLine = true, placeholder = { Text("09123456789") },
+            OutlinedTextField(Repo.phone, { Repo.phone = it; Repo.savePrefs() }, singleLine = true,
+                placeholder = { Text("09123456789") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr), modifier = Modifier.fillMaxWidth())
-            Text("سیم‌کارت دستگاه نباید پین‌کد داشته باشد و شماره شما باید به‌عنوان مدیر ثبت شده باشد. پاسخ‌ها فقط از همین شماره دریافت می‌شوند.",
-                style = MaterialTheme.typography.bodySmall, color = sub)
+            Text("پاسخ‌ها فقط از شمارهٔ ثبت‌شده دریافت می‌شوند.", style = MaterialTheme.typography.bodySmall, color = sub)
         }
         Card2 {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -212,26 +152,20 @@ fun SettingsTab() {
             }
         }
         Card2 {
-            Text("فاصله اجباری بین دستورها: ${fa(Repo.gapSec.toString())} ثانیه", fontWeight = FontWeight.Bold)
-            Slider(Repo.gapSec.toFloat(), { Repo.gapSec = it.toInt().coerceIn(1, 300); Repo.savePrefs() }, valueRange = 1f..300f)
-            Text("بین هر دو پیامکی که برنامه می‌فرستد، حتی از آیتم‌های مختلف، حداقل این فاصله رعایت می‌شود. اجرای هم‌زمان مهار می‌شود؛ کلیک دستی زودتر از موعد رد می‌شود و مراحل خودکار در صورت نیاز عقب می‌افتند. فاصله مراحل هر آیتم هم هیچ‌وقت کمتر از این مقدار نخواهد بود. بازه قابل تنظیم: ۱ تا ۳۰۰ ثانیه.",
+            Text("جلوگیری از اعلان تکراری پیامک دستگاه", fontWeight = FontWeight.Bold)
+            Text(if (Repo.isDefaultSms)
+                "این برنامه پیام‌رسان پیش‌فرض گوشی است؛ پیامک شمارهٔ دستگاه فقط در همین برنامه پردازش می‌شود."
+            else
+                "برای جلوگیری از اعلان هم‌زمان پیام‌رسان گوشی، این برنامه باید برنامهٔ پیش‌فرض SMS باشد. اندروید اجازهٔ حذف اعلان یک شمارهٔ خاص را به برنامهٔ غیرپیش‌فرض نمی‌دهد.",
                 style = MaterialTheme.typography.bodySmall, color = sub)
-        }
-        Card2 {
-            Text("حالت گوشی اختصاصی (برنامه پیش‌فرض SMS)", fontWeight = FontWeight.Bold)
-            Text(if (Repo.isDefaultSms) "فعال است ✓ — پاسخ‌های ماژول فقط داخل این برنامه می‌مانند و در برنامه پیام‌ها دیده نمی‌شوند."
-                else "غیرفعال — پاسخ‌های ماژول علاوه بر این برنامه، در برنامه پیام‌های گوشی هم نمایش داده می‌شوند.",
-                style = MaterialTheme.typography.bodySmall, color = sub)
-            Text("توجه: وقتی فعال باشد، این برنامه تمام پیامک‌های گوشی را دریافت می‌کند. پیامک‌های غیر از ماژول در صندوق سیستم ذخیره و با نوتیفیکیشن اعلام می‌شوند، اما این برنامه صفحه پیام‌رسانی ندارد؛ پس فقط برای گوشی اختصاصی مناسب است.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             Button(onClick = {
                 if (Repo.isDefaultSms) ctx.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
                 else { setSmsComponents(ctx, true); smsLauncher.launch(defaultSmsIntent(ctx)) }
-            }) { Text(if (Repo.isDefaultSms) "بازگرداندن برنامه پیام‌ها (از تنظیمات سیستم)" else "فعال‌سازی") }
+            }) { Text(if (Repo.isDefaultSms) "مدیریت برنامه پیامک پیش‌فرض" else "انتخاب به‌عنوان برنامه SMS پیش‌فرض") }
         }
         Card2 {
             Text("اجرای زمان‌بندی در پس‌زمینه", fontWeight = FontWeight.Bold)
-            Text("برای اینکه زمان‌بندی‌ها و پیامک‌های مرحله‌ای حتی وقتی برنامه بسته است اجرا شوند، بهینه‌سازی باتری را برای این برنامه غیرفعال کنید (گزینه «بدون محدودیت»).",
+            Text("برای بیشترین قابلیت اطمینان، محدودیت باتری برنامه را بردارید و اجازهٔ آلارم دقیق را فعال کنید. اندروید و برخی سازندگان ممکن است با توقف اجباری برنامه یا محدودیت‌های سیستم، اجرای دقیق را متوقف کنند.",
                 style = MaterialTheme.typography.bodySmall, color = sub)
             OutlinedButton(onClick = {
                 val intent = if (Build.VERSION.SDK_INT >= 23)
@@ -240,12 +174,12 @@ fun SettingsTab() {
                 runCatching { ctx.startActivity(intent) }.onFailure {
                     ctx.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 }
-            }) { Text("درخواست مجازشدن در پس‌زمینه") }
+            }) { Text("تنظیم محدودیت باتری") }
             if (Build.VERSION.SDK_INT >= 31) {
                 OutlinedButton(onClick = {
                     runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(Uri.parse("package:${ctx.packageName}"))) }
                         .onFailure { ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:${ctx.packageName}"))) }
-                }) { Text("اجازه زنگ هشدار دقیق") }
+                }) { Text("اجازهٔ آلارم دقیق") }
             }
         }
     }
