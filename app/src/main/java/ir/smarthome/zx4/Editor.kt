@@ -4,6 +4,12 @@ package ir.smarthome.zx4
 import android.graphics.Color as AndroidColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -104,7 +110,7 @@ fun EditorScreen(initial: Item?, onBack: () -> Unit, onSave: (Item) -> Unit, onD
             }
         }
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 24.dp),
+        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 EditorSection("مشخصات آیتم") {
@@ -240,23 +246,74 @@ fun EditorScreen(initial: Item?, onBack: () -> Unit, onSave: (Item) -> Unit, onD
         }
     }
     if (showColorPicker) {
-        val start = if (color in Palette.indices) Color(Palette[color]) else Color(color)
-        var red by remember { mutableFloatStateOf(start.red * 255f) }
-        var green by remember { mutableFloatStateOf(start.green * 255f) }
-        var blue by remember { mutableFloatStateOf(start.blue * 255f) }
-        val picked = Color(AndroidColor.rgb(red.toInt().coerceIn(0,255), green.toInt().coerceIn(0,255), blue.toInt().coerceIn(0,255)))
-        AlertDialog(
-            onDismissRequest = { showColorPicker = false }, title = { Text("انتخاب رنگ دلخواه") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(14.dp)).background(picked))
-                    Text("قرمز: ${red.toInt()}"); Slider(red, { red = it }, valueRange = 0f..255f)
-                    Text("سبز: ${green.toInt()}"); Slider(green, { green = it }, valueRange = 0f..255f)
-                    Text("آبی: ${blue.toInt()}"); Slider(blue, { blue = it }, valueRange = 0f..255f)
+        val initialColor = if (color in Palette.indices) Color(Palette[color]) else Color(color)
+        val hsv = remember {
+            FloatArray(3).also { AndroidColor.colorToHSV(initialColor.toArgb(), it) }
+        }
+        var hue by remember { mutableFloatStateOf(hsv[0]) }
+        var saturation by remember { mutableFloatStateOf(hsv[1]) }
+        var brightness by remember { mutableFloatStateOf(hsv[2]) }
+        val hueColor = Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f)))
+        val picked = Color(AndroidColor.HSVToColor(floatArrayOf(hue, saturation, brightness)))
+        fun updateField(x: Float, y: Float, width: Float, height: Float) {
+            saturation = (x / width).coerceIn(0f, 1f)
+            brightness = (1f - y / height).coerceIn(0f, 1f)
+        }
+        Dialog(onDismissRequest = { showColorPicker = false }) {
+            Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.colorScheme.surface) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("انتخاب رنگ دلخواه", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("روی طیف رنگی بکشید یا لمس کنید", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box(
+                        Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(16.dp))
+                            .background(hueColor)
+                            .pointerInput(hue) {
+                                detectTapGestures { updateField(it.x, it.y, size.width.toFloat(), size.height.toFloat()) }
+                            }
+                            .pointerInput(hue) {
+                                detectDragGestures { change, _ ->
+                                    updateField(change.position.x, change.position.y, size.width.toFloat(), size.height.toFloat())
+                                }
+                            }
+                    ) {
+                        Canvas(Modifier.fillMaxSize()) {
+                            drawRect(Brush.horizontalGradient(listOf(Color.White, hueColor)))
+                            drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black)))
+                            val x = saturation * size.width
+                            val y = (1f - brightness) * size.height
+                            drawCircle(Color.White, radius = 10.dp.toPx(), center = Offset(x, y), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()))
+                            drawCircle(Color.Black.copy(alpha = 0.65f), radius = 12.dp.toPx(), center = Offset(x, y), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()))
+                        }
+                    }
+                    Canvas(
+                        Modifier.fillMaxWidth().height(30.dp).clip(CircleShape)
+                            .pointerInput(Unit) {
+                                detectTapGestures { hue = (it.x / size.width * 360f).coerceIn(0f, 360f) }
+                            }
+                            .pointerInput(Unit) {
+                                detectDragGestures { change, _ -> hue = (change.position.x / size.width * 360f).coerceIn(0f, 360f) }
+                            }
+                    ) {
+                        drawRect(Brush.horizontalGradient(listOf(
+                            Color.Red, Color.Yellow, Color.Green, Color.Cyan,
+                            Color.Blue, Color.Magenta, Color.Red
+                        )))
+                        val x = hue / 360f * size.width
+                        drawCircle(Color.White, radius = 9.dp.toPx(), center = Offset(x, size.height / 2), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(picked))
+                        Column(Modifier.weight(1f)) {
+                            Text("پیش‌نمایش رنگ", style = MaterialTheme.typography.labelLarge)
+                            Text("#%06X".format(picked.toArgb() and 0xFFFFFF), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showColorPicker = false }) { Text("انصراف") }
+                        Button(onClick = { color = picked.toArgb(); showColorPicker = false }) { Text("انتخاب رنگ") }
+                    }
                 }
-            },
-            confirmButton = { TextButton(onClick = { color = picked.toArgb(); showColorPicker = false }) { Text("انتخاب") } },
-            dismissButton = { TextButton(onClick = { showColorPicker = false }) { Text("انصراف") } }
-        )
+            }
+        }
     }
 }
