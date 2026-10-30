@@ -252,7 +252,6 @@ fun ItemCard(item: Item, onRun: () -> Unit, onEdit: () -> Unit, onHistory: () ->
                     }
                 }
                 Row { IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) { Icon(Icons.Filled.Edit, "ویرایش", modifier = Modifier.size(16.dp)) }; IconButton(onClick = onHistory, modifier = Modifier.size(30.dp)) { Icon(Icons.Filled.History, "تاریخچه", modifier = Modifier.size(16.dp)) } }
-                if (p != null) TextButton(onClick = onCancel, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) { Text("لغو", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall) }
             }
         }
     }
