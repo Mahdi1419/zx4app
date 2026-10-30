@@ -106,8 +106,8 @@ fun Root() {
         EditorScreen(
             initial = editing,
             onBack = { showEditor = false },
-            onSave = { Repo.upsert(it); Engine.schedule(ctx, it); showEditor = false },
-            onDelete = editing?.let { e -> { Engine.remove(ctx, e.id); Repo.delete(e.id); showEditor = false } }
+            onSave = { Repo.upsert(it); Engine.schedule(ctx, it); CommandWidgetProvider.refreshAll(ctx); showEditor = false },
+            onDelete = editing?.let { e -> { Engine.remove(ctx, e.id); Repo.delete(e.id); CommandWidgetProvider.refreshAll(ctx); showEditor = false } }
         )
     } else {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
