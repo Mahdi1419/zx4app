@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Repo.activeItemId == null) Engine.scheduleAll(this) else Engine.restorePending(this)
         setContent {
             val dark = Repo.themeMode == 2 || (Repo.themeMode == 0 && isSystemInDarkTheme())
             DisposableEffect(dark) {
