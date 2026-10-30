@@ -97,94 +97,109 @@ fun SettingsTab() {
     val ctx = LocalContext.current
     val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { syncDefaultSms(ctx) }
     val sub = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp, 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("شخصی‌سازی و کنترل رفتار برنامه", style = MaterialTheme.typography.bodyMedium, color = sub)
-        Card2 {
-            Text("شخصی‌سازی", fontWeight = FontWeight.Bold)
-            OutlinedTextField(Repo.appTitle, { Repo.appTitle = it.take(30); Repo.savePrefs() }, singleLine = true,
-                label = { Text("عنوان برنامه") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(Repo.deviceName, { Repo.deviceName = it.take(30); Repo.savePrefs() }, singleLine = true,
-                label = { Text("نام دستگاه") }, modifier = Modifier.fillMaxWidth())
-            Text("تم", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("سیستم", "روشن", "زغالی تیره").forEachIndexed { i, label ->
-                    FilterChip(Repo.themeMode == i, { Repo.themeMode = i; Repo.savePrefs() }, { Text(label) })
-                }
-            }
-            Text("رنگ تأکیدی", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Palette.forEachIndexed { i, p ->
-                    Box(Modifier.size(34.dp).clip(CircleShape).background(Color(p))
-                        .then(if (Repo.accent == i) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-                        .clickable { Repo.accent = i; Repo.savePrefs() })
-                }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("تنظیمات", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("شخصی‌سازی و کنترل رفتار برنامه", style = MaterialTheme.typography.bodyMedium, color = sub)
             }
         }
-        Card2 {
-            Text("ویجت صفحه اصلی", fontWeight = FontWeight.Bold)
-            Text("یک ویجت اضافه کن و آیتم‌ها یا گروهی از آیتم‌ها را برای اجرای سریع انتخاب کن.",
-                style = MaterialTheme.typography.bodySmall, color = sub)
-            OutlinedButton(onClick = {
-                if (Build.VERSION.SDK_INT >= 26) {
-                    val manager = AppWidgetManager.getInstance(ctx)
-                    if (manager.isRequestPinAppWidgetSupported) {
-                        manager.requestPinAppWidget(ComponentName(ctx, CommandWidgetProvider::class.java), null, null)
-                    } else {
-                        Repo.status = "لانچر گوشی افزودن مستقیم ویجت را پشتیبانی نمی‌کند؛ از فهرست ویجت‌های لانچر استفاده کنید."
+        item {
+            Card2 {
+                Text("شخصی‌سازی", fontWeight = FontWeight.Bold)
+                OutlinedTextField(Repo.appTitle, { Repo.appTitle = it.take(30); Repo.savePrefs() }, singleLine = true,
+                    label = { Text("عنوان برنامه") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(Repo.deviceName, { Repo.deviceName = it.take(30); Repo.savePrefs() }, singleLine = true,
+                    label = { Text("نام دستگاه") }, modifier = Modifier.fillMaxWidth())
+                Text("تم", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("سیستم", "روشن", "زغالی تیره").forEachIndexed { i, label ->
+                        FilterChip(Repo.themeMode == i, { Repo.themeMode = i; Repo.savePrefs() }, { Text(label) })
                     }
-                } else {
-                    Repo.status = "ویجت در اندروید ۸ به بالا قابل افزودن مستقیم است."
                 }
-            }, modifier = Modifier.fillMaxWidth()) { Text("افزودن ویجت به صفحه اصلی") }
-        }
-        Card2 {
-            Text("شماره سیم‌کارت دستگاه", fontWeight = FontWeight.Bold)
-            OutlinedTextField(Repo.phone, { Repo.phone = it; Repo.savePrefs() }, singleLine = true,
-                placeholder = { Text("09123456789") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr), modifier = Modifier.fillMaxWidth())
-            Text("پاسخ‌ها فقط از شمارهٔ ثبت‌شده دریافت می‌شوند.", style = MaterialTheme.typography.bodySmall, color = sub)
-        }
-        Card2 {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("تأیید قبل از ارسال", fontWeight = FontWeight.Bold)
-                    Text("قبل از اجرای دستی هر آیتم پرسیده شود", style = MaterialTheme.typography.bodySmall, color = sub)
+                Text("رنگ تأکیدی", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Palette.forEachIndexed { i, p ->
+                        Box(Modifier.size(34.dp).clip(CircleShape).background(Color(p))
+                            .then(if (Repo.accent == i) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
+                            .clickable { Repo.accent = i; Repo.savePrefs() })
+                    }
                 }
-                Switch(Repo.confirm, { Repo.confirm = it; Repo.savePrefs() })
             }
         }
-        Card2 {
-            Text("جلوگیری از اعلان تکراری پیامک دستگاه", fontWeight = FontWeight.Bold)
-            Text(if (Repo.isDefaultSms)
-                "این برنامه پیام‌رسان پیش‌فرض گوشی است؛ پیامک شمارهٔ دستگاه فقط در همین برنامه پردازش می‌شود."
-            else
-                "برای جلوگیری از اعلان هم‌زمان پیام‌رسان گوشی، این برنامه باید برنامهٔ پیش‌فرض SMS باشد. اندروید اجازهٔ حذف اعلان یک شمارهٔ خاص را به برنامهٔ غیرپیش‌فرض نمی‌دهد.",
-                style = MaterialTheme.typography.bodySmall, color = sub)
-            Button(onClick = {
-                if (Repo.isDefaultSms) ctx.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
-                else { setSmsComponents(ctx, true); smsLauncher.launch(defaultSmsIntent(ctx)) }
-            }) { Text(if (Repo.isDefaultSms) "مدیریت برنامه پیامک پیش‌فرض" else "انتخاب به‌عنوان برنامه SMS پیش‌فرض") }
-        }
-        Card2 {
-            Text("اجرای زمان‌بندی در پس‌زمینه", fontWeight = FontWeight.Bold)
-            Text("برای بیشترین قابلیت اطمینان، محدودیت باتری برنامه را بردارید و اجازهٔ آلارم دقیق را فعال کنید. اندروید و برخی سازندگان ممکن است با توقف اجباری برنامه یا محدودیت‌های سیستم، اجرای دقیق را متوقف کنند.",
-                style = MaterialTheme.typography.bodySmall, color = sub)
-            OutlinedButton(onClick = {
-                val intent = if (Build.VERSION.SDK_INT >= 23)
-                    Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:${ctx.packageName}"))
-                else Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                runCatching { ctx.startActivity(intent) }.onFailure {
-                    ctx.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                }
-            }) { Text("تنظیم محدودیت باتری") }
-            if (Build.VERSION.SDK_INT >= 31) {
+        item {
+            Card2 {
+                Text("ویجت صفحه اصلی", fontWeight = FontWeight.Bold)
+                Text("ویجت را می‌توان تک‌دکمه‌ای یا چنددکمه‌ای ساخت. برای تغییر فرمان‌های انتخاب‌شده، روی عنوان ویجت در صفحه اصلی گوشی بزن.",
+                    style = MaterialTheme.typography.bodySmall, color = sub)
                 OutlinedButton(onClick = {
-                    runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(Uri.parse("package:${ctx.packageName}"))) }
-                        .onFailure { ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:${ctx.packageName}"))) }
-                }) { Text("اجازهٔ آلارم دقیق") }
+                    if (Build.VERSION.SDK_INT >= 26) {
+                        val manager = AppWidgetManager.getInstance(ctx)
+                        if (manager.isRequestPinAppWidgetSupported) {
+                            manager.requestPinAppWidget(ComponentName(ctx, CommandWidgetProvider::class.java), null, null)
+                        } else Repo.status = "لانچر گوشی افزودن مستقیم ویجت را پشتیبانی نمی‌کند؛ از فهرست ویجت‌های لانچر استفاده کنید."
+                    } else Repo.status = "افزودن مستقیم ویجت در اندروید ۸ به بالا پشتیبانی می‌شود."
+                }, modifier = Modifier.fillMaxWidth()) { Text("افزودن ویجت به صفحه اصلی") }
+            }
+        }
+        item {
+            Card2 {
+                Text("شماره سیم‌کارت دستگاه", fontWeight = FontWeight.Bold)
+                OutlinedTextField(Repo.phone, { Repo.phone = it; Repo.savePrefs() }, singleLine = true,
+                    placeholder = { Text("09123456789") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr), modifier = Modifier.fillMaxWidth())
+                Text("پاسخ‌ها فقط از شمارهٔ ثبت‌شده دریافت می‌شوند.", style = MaterialTheme.typography.bodySmall, color = sub)
+            }
+        }
+        item {
+            Card2 {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("تأیید قبل از ارسال", fontWeight = FontWeight.Bold)
+                        Text("قبل از اجرای دستی هر آیتم پرسیده شود", style = MaterialTheme.typography.bodySmall, color = sub)
+                    }
+                    Switch(Repo.confirm, { Repo.confirm = it; Repo.savePrefs() })
+                }
+            }
+        }
+        item {
+            Card2 {
+                Text("جلوگیری از اعلان تکراری پیامک دستگاه", fontWeight = FontWeight.Bold)
+                Text(if (Repo.isDefaultSms)
+                    "این برنامه پیام‌رسان پیش‌فرض گوشی است؛ پیامک شمارهٔ دستگاه فقط در همین برنامه پردازش می‌شود."
+                else
+                    "برای جلوگیری از اعلان هم‌زمان پیام‌رسان گوشی، این برنامه باید برنامهٔ پیش‌فرض SMS باشد. اندروید اجازهٔ حذف اعلان یک شمارهٔ خاص را به برنامهٔ غیرپیش‌فرض نمی‌دهد.",
+                    style = MaterialTheme.typography.bodySmall, color = sub)
+                Button(onClick = {
+                    if (Repo.isDefaultSms) ctx.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+                    else { setSmsComponents(ctx, true); smsLauncher.launch(defaultSmsIntent(ctx)) }
+                }) { Text(if (Repo.isDefaultSms) "مدیریت برنامه پیامک پیش‌فرض" else "انتخاب به‌عنوان برنامه SMS پیش‌فرض") }
+            }
+        }
+        item {
+            Card2 {
+                Text("اجرای زمان‌بندی در پس‌زمینه", fontWeight = FontWeight.Bold)
+                Text("برای بیشترین قابلیت اطمینان، محدودیت باتری برنامه را بردارید و اجازهٔ آلارم دقیق را فعال کنید. اندروید و برخی سازندگان ممکن است با توقف اجباری برنامه یا محدودیت‌های سیستم، اجرای دقیق را متوقف کنند.",
+                    style = MaterialTheme.typography.bodySmall, color = sub)
+                OutlinedButton(onClick = {
+                    val intent = if (Build.VERSION.SDK_INT >= 23)
+                        Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:${ctx.packageName}"))
+                    else Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    runCatching { ctx.startActivity(intent) }.onFailure {
+                        ctx.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    }
+                }) { Text("تنظیم محدودیت باتری") }
+                if (Build.VERSION.SDK_INT >= 31) {
+                    OutlinedButton(onClick = {
+                        runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(Uri.parse("package:${ctx.packageName}"))) }
+                            .onFailure { ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:${ctx.packageName}"))) }
+                    }) { Text("اجازهٔ آلارم دقیق") }
+                }
             }
         }
     }
