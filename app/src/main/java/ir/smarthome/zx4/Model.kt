@@ -4,8 +4,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 
-/** delaySec = مدت انتظار بعد از ارسال این پیامک تا ارسال پیامک بعدی */
-data class Step(val cmd: String, val delaySec: Int)
+/** delaySec = مدت تأخیر این مرحله نسبت به مرحله قبلی؛ مرحله اول نادیده گرفته می‌شود. */
+data class Step(val cmd: String, val delaySec: Int, val waitForReply: Boolean = false, val timeoutSec: Int = 60)
 
 data class Schedule(
     val enabled: Boolean = false,
@@ -23,7 +23,7 @@ data class Item(val id: String, val name: String, val icon: String, val color: I
 data class Reply(val at: Long, val text: String)
 data class Entry(val id: String, val itemId: String?, val itemName: String, val cmd: String,
                  val at: Long, val source: String, val error: String?, val replies: List<Reply>)
-data class Pending(val idx: Int, val at: Long)
+data class Pending(val idx: Int, val at: Long, val waitingReply: Boolean = false, val source: String = "manual")
 data class Template(val label: String, val cmd: String)
 
 val Days = listOf(Triple(7, "ش", "شنبه"), Triple(1, "ی", "یکشنبه"), Triple(2, "د", "دوشنبه"),
@@ -77,17 +77,23 @@ fun Schedule.label(): String? {
     return "$w • $t"
 }
 
-fun Item.toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("icon", icon).put("color", color)
-    .put("steps", JSONArray().also { a -> steps.forEach { a.put(JSONObject().put("c", it.cmd).put("d", it.delaySec)) } })
+fun Item.toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("icon", icon).put("color", color).put("sv", 2)
+    .put("steps", JSONArray().also { a -> steps.forEach { a.put(JSONObject().put("c", it.cmd).put("d", it.delaySec).put("w", it.waitForReply).put("t", it.timeoutSec)) } })
     .put("sch", JSONObject().put("on", schedule.enabled).put("n1", schedule.everyN)
         .put("days", JSONArray(schedule.days.toList())).put("n", schedule.n)
         .put("anc", schedule.anchorDay).put("h", schedule.hour).put("m", schedule.minute))
 
 fun itemFrom(o: JSONObject): Item {
     val sa = o.getJSONArray("steps"); val so = o.getJSONObject("sch"); val da = so.getJSONArray("days")
+    val parsed = List(sa.length()) { i ->
+        sa.getJSONObject(i).let { Step(it.getString("c"), it.getInt("d"), it.optBoolean("w", false), it.optInt("t", 60)) }
+    }
+    // Older saves stored each delay on the preceding step. Shift those values forward once.
+    val steps = if (o.optInt("sv", 1) >= 2) parsed else parsed.mapIndexed { i, step ->
+        step.copy(delaySec = if (i == 0) 0 else parsed[i - 1].delaySec)
+    }
     return Item(o.getString("id"), o.getString("name"), o.getString("icon"), o.getInt("color"),
-        List(sa.length()) { i -> sa.getJSONObject(i).let { Step(it.getString("c"), it.getInt("d")) } },
-        Schedule(so.getBoolean("on"), so.getBoolean("n1"), (0 until da.length()).map { da.getInt(it) }.toSet(),
+        steps, Schedule(so.getBoolean("on"), so.getBoolean("n1"), (0 until da.length()).map { da.getInt(it) }.toSet(),
             so.getInt("n"), so.getLong("anc"), so.getInt("h"), so.getInt("m")))
 }
 

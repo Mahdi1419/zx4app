@@ -38,7 +38,7 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E '^e: ' build.log | head -60 || truee
+          grep -E '^e: ' build.log | head -60 || true
 
       - name: Upload build log
         if: failure()
@@ -47,16 +47,64 @@ jobs:
           name: build-log
           path: build.log
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk zx4-control.apk
+      - name: Prepare release signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            KEYSTORE_FILE="$RUNNER_TEMP/zx4-release-key.jks"
+            # Remove line breaks/spaces in case GitHub secret was pasted with wrapping.
+            printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$KEYSTORE_FILE"
+            test -s "$KEYSTORE_FILE"
+            # Validate the keystore and credentials without printing secrets.
+            keytool -list -keystore "$KEYSTORE_FILE" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+            echo "RELEASE_STORE_FILE=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "Release signing keystore decoded and validated."
+          else
+            echo "Signing secrets are incomplete; building an unsigned release APK."
+          fi
+
+      - name: Build optimized release APK
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          gradle assembleRelease --no-daemon --console=plain 2>&1 | tee release-build.log
+
+      - name: Prepare APK artifacts
+        shell: bash
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk zx4-control-debug.apk
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk zx4-control-release.apk
+          else
+            cp app/build/outputs/apk/release/app-release-unsigned.apk zx4-control-release-unsigned.apk
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: zx4-control-apk
-          path: zx4-control.apk
+          name: zx4-control-debug
+          path: zx4-control-debug.apk
 
-      - name: Publish release (on tag)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+      - name: Upload signed release APK
+        if: hashFiles('zx4-control-release.apk') != ''
+        uses: actions/upload-artifact@v4
         with:
-          files: zx4-control.apk
+          name: zx4-control-release
+          path: zx4-control-release.apk
+
+      - name: Upload unsigned release APK
+        if: hashFiles('zx4-control-release-unsigned.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: zx4-control-release-unsigned
+          path: zx4-control-release-unsigned.apk
