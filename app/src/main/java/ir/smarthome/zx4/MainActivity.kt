@@ -47,12 +47,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         syncDefaultSms(this)
-        Engine.scheduleAll(this)
-        Engine.restorePending(this)
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Engine.scheduleAll(this)
         setContent {
             val dark = Repo.themeMode == 2 || (Repo.themeMode == 0 && isSystemInDarkTheme())
             DisposableEffect(dark) {
