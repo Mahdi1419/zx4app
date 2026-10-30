@@ -77,7 +77,7 @@ fun Schedule.label(): String? {
     return "$w • $t"
 }
 
-fun Item.toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("icon", icon).put("color", color)
+fun Item.toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("icon", icon).put("color", color).put("sv", 2)
     .put("steps", JSONArray().also { a -> steps.forEach { a.put(JSONObject().put("c", it.cmd).put("d", it.delaySec).put("w", it.waitForReply).put("t", it.timeoutSec)) } })
     .put("sch", JSONObject().put("on", schedule.enabled).put("n1", schedule.everyN)
         .put("days", JSONArray(schedule.days.toList())).put("n", schedule.n)
@@ -85,9 +85,15 @@ fun Item.toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put
 
 fun itemFrom(o: JSONObject): Item {
     val sa = o.getJSONArray("steps"); val so = o.getJSONObject("sch"); val da = so.getJSONArray("days")
+    val parsed = List(sa.length()) { i ->
+        sa.getJSONObject(i).let { Step(it.getString("c"), it.getInt("d"), it.optBoolean("w", false), it.optInt("t", 60)) }
+    }
+    // Older saves stored each delay on the preceding step. Shift those values forward once.
+    val steps = if (o.optInt("sv", 1) >= 2) parsed else parsed.mapIndexed { i, step ->
+        step.copy(delaySec = if (i == 0) 0 else parsed[i - 1].delaySec)
+    }
     return Item(o.getString("id"), o.getString("name"), o.getString("icon"), o.getInt("color"),
-        List(sa.length()) { i -> sa.getJSONObject(i).let { Step(it.getString("c"), it.getInt("d"), it.optBoolean("w", false), it.optInt("t", 60)) } },
-        Schedule(so.getBoolean("on"), so.getBoolean("n1"), (0 until da.length()).map { da.getInt(it) }.toSet(),
+        steps, Schedule(so.getBoolean("on"), so.getBoolean("n1"), (0 until da.length()).map { da.getInt(it) }.toSet(),
             so.getInt("n"), so.getLong("anc"), so.getInt("h"), so.getInt("m")))
 }
 
