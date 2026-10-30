@@ -16,7 +16,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Repo.init(this)
-        Engine.scheduleAll(this)
+        // AlarmManager alarms survive process death; only restore persisted multi-step work here.
         Engine.restorePending(this)
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
