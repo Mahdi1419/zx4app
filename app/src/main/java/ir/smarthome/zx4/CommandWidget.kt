@@ -69,6 +69,7 @@ class CommandWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_title, configure)
+            views.setOnClickPendingIntent(R.id.widget_root, configure)
             views.removeAllViews(R.id.widget_items)
             if (chosen.isEmpty()) {
                 views.setTextViewText(R.id.widget_empty, "برای تنظیم، ویجت را لمس کنید")
