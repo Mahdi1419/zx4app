@@ -61,6 +61,14 @@ class CommandWidgetProvider : AppWidgetProvider() {
                 .let { if (mode == "single") it.take(1) else it }
             val views = android.widget.RemoteViews(context.packageName, R.layout.command_widget)
             views.setTextViewText(R.id.widget_title, if (mode == "single") "فرمان سریع" else "فرمان‌های خانه")
+            val configure = PendingIntent.getActivity(
+                context, widgetId + 50_000,
+                Intent(context, WidgetConfigureActivity::class.java)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_title, configure)
             views.removeAllViews(R.id.widget_items)
             if (chosen.isEmpty()) {
                 views.setTextViewText(R.id.widget_empty, "برای تنظیم، ویجت را لمس کنید")
