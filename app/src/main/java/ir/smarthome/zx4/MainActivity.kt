@@ -44,7 +44,12 @@ val IconMap: Map<String, ImageVector> = linkedMapOf(
 )
 
 class MainActivity : ComponentActivity() {
-    override fun onResume() { super.onResume(); syncDefaultSms(this) }
+    override fun onResume() {
+        super.onResume()
+        syncDefaultSms(this)
+        Engine.scheduleAll(this)
+        Engine.restorePending(this)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Engine.scheduleAll(this)
