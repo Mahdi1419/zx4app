@@ -55,10 +55,16 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/zx4-release-key.jks"
-            echo "RELEASE_STORE_FILE=$RUNNER_TEMP/zx4-release-key.jks" >> "$GITHUB_ENV"
-            echo "Release signing is configured."
+            KEYSTORE_FILE="$RUNNER_TEMP/zx4-release-key.jks"
+            # Remove line breaks/spaces in case GitHub secret was pasted with wrapping.
+            printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$KEYSTORE_FILE"
+            test -s "$KEYSTORE_FILE"
+            # Validate the keystore and credentials without printing secrets.
+            keytool -list -keystore "$KEYSTORE_FILE" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+            echo "RELEASE_STORE_FILE=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "Release signing keystore decoded and validated."
           else
             echo "Signing secrets are incomplete; building an unsigned release APK."
           fi
