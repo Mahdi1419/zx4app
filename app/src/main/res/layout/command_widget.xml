@@ -1,19 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="12dp"
-    android:background="#FFFFFFFF">
-    <TextView
-        android:id="@+id/widget_title"
+    android:background="@drawable/widget_background">
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="فرمان‌های خانه"
-        android:textColor="#FF171717"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:paddingBottom="8dp" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="8dp">
+        <View
+            android:layout_width="4dp"
+            android:layout_height="20dp"
+            android:background="#FF0F766E" />
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="9dp"
+            android:text="فرمان سریع"
+            android:textColor="#FF20252D"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ZX4"
+            android:textColor="#FF75808E"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+    <TextView
+        android:id="@+id/widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="12dp"
+        android:text="برای تنظیم، ویجت را لمس کنید"
+        android:textColor="#FF697482"
+        android:textSize="12sp"
+        android:visibility="gone" />
     <LinearLayout
         android:id="@+id/widget_items"
         android:layout_width="match_parent"
