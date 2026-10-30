@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
-data class StepUi(val cmd: String, val value: String, val minutes: Boolean)
+data class StepUi(val cmd: String, val value: String, val minutes: Boolean, val waitForReply: Boolean = false, val timeoutValue: String = "60", val timeoutMinutes: Boolean = false)
 
 @Composable
 private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
@@ -46,10 +46,12 @@ fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, o
     var color by remember { mutableIntStateOf(initial?.color ?: 0) }
     val steps = remember {
         mutableStateListOf<StepUi>().apply {
-            if (initial == null) add(StepUi("", "30", false))
+            if (initial == null) add(StepUi("", "0", false))
             else initial.steps.forEach {
                 val m = it.delaySec >= 60 && it.delaySec % 60 == 0
-                add(StepUi(it.cmd, (if (m) it.delaySec / 60 else it.delaySec).toString(), m))
+                val tm = it.timeoutSec >= 60 && it.timeoutSec % 60 == 0
+                add(StepUi(it.cmd, (if (m) it.delaySec / 60 else it.delaySec).toString(), m,
+                    it.waitForReply, (if (tm) it.timeoutSec / 60 else it.timeoutSec).toString(), tm))
             }
         }
     }
@@ -103,14 +105,33 @@ fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, o
                                 label = { Text("پیامک مرحله ${fa((i + 1).toString())}") },
                                 trailingIcon = { if (steps.size > 1) IconButton(onClick = { steps.removeAt(i) }) { Icon(Icons.Filled.Close, "حذف") } },
                                 modifier = Modifier.fillMaxWidth())
-                            if (i < steps.lastIndex) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Icon(Icons.Filled.Timer, null, tint = MaterialTheme.colorScheme.primary)
-                                Text("صبر کن")
-                                OutlinedTextField(s.value, { steps[i] = s.copy(value = it.filter { c -> c.isDigit() || c == '.' }) },
-                                    singleLine = true, textStyle = ltr, modifier = Modifier.width(84.dp),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                                FilterChip(!s.minutes, { steps[i] = s.copy(minutes = false) }, { Text("ثانیه") })
-                                FilterChip(s.minutes, { steps[i] = s.copy(minutes = true) }, { Text("دقیقه") })
+                            if (i > 0) {
+                                Text("تأخیر از مرحله قبل", style = MaterialTheme.typography.labelMedium)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Filled.Timer, null, tint = MaterialTheme.colorScheme.primary)
+                                    OutlinedTextField(s.value, { steps[i] = s.copy(value = it.filter { ch -> ch.isDigit() }) },
+                                        singleLine = true, textStyle = ltr, modifier = Modifier.width(84.dp),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                                    FilterChip(!s.minutes, { steps[i] = s.copy(minutes = false) }, { Text("ثانیه") })
+                                    FilterChip(s.minutes, { steps[i] = s.copy(minutes = true) }, { Text("دقیقه") })
+                                }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = s.waitForReply, onCheckedChange = { steps[i] = s.copy(waitForReply = it) })
+                                Column(Modifier.weight(1f)) {
+                                    Text("انتظار برای پاسخ دستگاه", fontWeight = FontWeight.Medium)
+                                    Text("مرحله بعد پس از دریافت پاسخ یا پایان مهلت اجرا می‌شود", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            if (s.waitForReply) {
+                                Text("حداکثر زمان انتظار", style = MaterialTheme.typography.labelMedium)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(s.timeoutValue, { steps[i] = s.copy(timeoutValue = it.filter { ch -> ch.isDigit() }) },
+                                        singleLine = true, textStyle = ltr, modifier = Modifier.width(84.dp),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                                    FilterChip(!s.timeoutMinutes, { steps[i] = s.copy(timeoutMinutes = false) }, { Text("ثانیه") })
+                                    FilterChip(s.timeoutMinutes, { steps[i] = s.copy(timeoutMinutes = true) }, { Text("دقیقه") })
+                                }
                             }
                         }
                     }
@@ -128,8 +149,6 @@ fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, o
                         }, label = { Text(t.label) })
                     }
                 }
-                Text("حداقل فاصله بین دو پیامک طبق تنظیمات: ${fa(Repo.gapSec.toString())} ثانیه",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Section("زمان‌بندی") {
@@ -175,9 +194,10 @@ fun EditorSheet(initial: Item?, onDismiss: () -> Unit, onSave: (Item) -> Unit, o
                     modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp),
                     onClick = {
                         val out = valid.mapIndexed { i, s ->
-                            val sec = if (i == valid.lastIndex) 0
-                            else ((s.value.toDoubleOrNull() ?: 20.0) * (if (s.minutes) 60 else 1)).toInt().coerceAtLeast(Repo.gapSec)
-                            Step(s.cmd.trim(), sec)
+                            val sec = if (i == 0) 0
+                            else ((s.value.toIntOrNull() ?: 0) * (if (s.minutes) 60 else 1)).coerceAtLeast(0)
+                            val timeout = (s.timeoutValue.toIntOrNull() ?: 60) * (if (s.timeoutMinutes) 60 else 1)
+                            Step(s.cmd.trim(), sec, s.waitForReply, timeout.coerceIn(1, 86_400))
                         }
                         onSave(Item(initial?.id ?: Repo.uid(), name.trim(), icon, color, out, draft()))
                     }) { Text("ذخیره") }
