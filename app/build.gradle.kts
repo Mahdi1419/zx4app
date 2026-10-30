@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseSigningConfigured =
+    providers.environmentVariable("KEYSTORE_BASE64").orNull?.isNotBlank() == true &&
+    providers.environmentVariable("KEYSTORE_PASSWORD").orNull?.isNotBlank() == true &&
+    providers.environmentVariable("KEY_ALIAS").orNull?.isNotBlank() == true &&
+    providers.environmentVariable("KEY_PASSWORD").orNull?.isNotBlank() == true &&
+    providers.environmentVariable("RELEASE_STORE_FILE").orNull?.isNotBlank() == true
+
 android {
     namespace = "ir.smarthome.zx4"
     compileSdk = 34
@@ -13,10 +20,23 @@ android {
         versionCode = 1
         versionName = "1.0"
     }
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(providers.environmentVariable("RELEASE_STORE_FILE").get())
+                storePassword = providers.environmentVariable("KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("KEY_PASSWORD").get()
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
