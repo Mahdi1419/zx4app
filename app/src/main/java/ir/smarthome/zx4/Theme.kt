@@ -4,7 +4,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -31,40 +30,64 @@ private val AppTypography = Typography(
     labelSmall = base.labelSmall.copy(fontFamily = Vazir),
 )
 
-/** mode: 0 = سیستم ، 1 = روشن ، 2 = تیره (زغالی خنثی) */
+/** mode: 0 = سیستم، 1 = روشن، 2 = زغالی تیره */
 @Composable
 fun AppTheme(mode: Int, accentIdx: Int, content: @Composable () -> Unit) {
     val dark = mode == 2 || (mode == 0 && isSystemInDarkTheme())
-    val a = Color(Palette[accentIdx % Palette.size])
+    val accent = Color(Palette[accentIdx.coerceIn(0, Palette.lastIndex)])
     val scheme = if (dark) {
-        // Dark mode uses neutral charcoal; the accent must not tint the whole UI green or navy.
-        val charcoal = Color(0xFF303030)
         darkColorScheme(
-            primary = Color(0xFFD6D6D6), onPrimary = Color(0xFF202020),
-            primaryContainer = Color(0xFF393939), onPrimaryContainer = Color(0xFFF5F5F5),
-            secondary = Color(0xFFBDBDBD), onSecondary = Color(0xFF202020),
-            secondaryContainer = Color(0xFF393939), onSecondaryContainer = Color(0xFFF5F5F5),
-            background = Color(0xFF101114), onBackground = Color(0xFFF4F4F6),
-            surface = Color(0xFF202126), onSurface = Color(0xFFF4F4F6),
-            surfaceVariant = Color(0xFF303137), onSurfaceVariant = Color(0xFFC2C3CC),
-            outline = Color(0xFF858690), outlineVariant = Color(0xFF41424A), surfaceTint = Color.Transparent,
-            surfaceContainerLowest = Color(0xFF111216), surfaceContainerLow = Color(0xFF191A20),
-            surfaceContainer = Color(0xFF202126), surfaceContainerHigh = Color(0xFF292A31),
-            surfaceContainerHighest = Color(0xFF34353D),
+            primary = Color(0xFFE6E6E6),
+            onPrimary = Color(0xFF202020),
+            primaryContainer = Color(0xFF414141),
+            onPrimaryContainer = Color(0xFFF7F7F7),
+            secondary = Color(0xFFCACACA),
+            onSecondary = Color(0xFF202020),
+            secondaryContainer = Color(0xFF3A3A3A),
+            onSecondaryContainer = Color(0xFFF4F4F4),
+            background = Color(0xFF202020),
+            onBackground = Color(0xFFF5F5F5),
+            surface = Color(0xFF292929),
+            onSurface = Color(0xFFF5F5F5),
+            surfaceVariant = Color(0xFF353535),
+            onSurfaceVariant = Color(0xFFD0D0D0),
+            outline = Color(0xFF777777),
+            outlineVariant = Color(0xFF4A4A4A),
+            error = Color(0xFFFFB4AB),
+            onError = Color(0xFF690005),
+            surfaceTint = Color.Transparent,
+            surfaceContainerLowest = Color(0xFF1B1B1B),
+            surfaceContainerLow = Color(0xFF242424),
+            surfaceContainer = Color(0xFF292929),
+            surfaceContainerHigh = Color(0xFF303030),
+            surfaceContainerHighest = Color(0xFF393939),
         )
     } else {
-        val pc = lerp(Color.White, a, 0.18f)
-        val onPc = lerp(a, Color.Black, 0.6f)
         lightColorScheme(
-            primary = a, onPrimary = Color.White,
-            primaryContainer = pc, onPrimaryContainer = onPc,
-            secondaryContainer = pc, onSecondaryContainer = onPc,
-            background = Color(0xFFF4F6F6), surface = Color.White,
-            surfaceVariant = Color(0xFFE9ECEC), onSurfaceVariant = Color(0xFF5A6060),
+            primary = accent,
+            onPrimary = Color.White,
+            primaryContainer = Color(0xFFEDEDED),
+            onPrimaryContainer = Color(0xFF202020),
+            secondary = Color(0xFF505050),
+            onSecondary = Color.White,
+            secondaryContainer = Color(0xFFEAEAEA),
+            onSecondaryContainer = Color(0xFF242424),
+            background = Color.White,
+            onBackground = Color(0xFF171717),
+            surface = Color.White,
+            onSurface = Color(0xFF171717),
+            surfaceVariant = Color(0xFFF1F1F1),
+            onSurfaceVariant = Color(0xFF555555),
+            outline = Color(0xFF858585),
+            outlineVariant = Color(0xFFD8D8D8),
+            error = Color(0xFFBA1A1A),
+            onError = Color.White,
             surfaceTint = Color.Transparent,
-            surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF7F8F8),
-            surfaceContainer = Color(0xFFF1F4F4), surfaceContainerHigh = Color(0xFFEBEFEF),
-            surfaceContainerHighest = Color(0xFFE5E9E9),
+            surfaceContainerLowest = Color.White,
+            surfaceContainerLow = Color(0xFFFAFAFA),
+            surfaceContainer = Color(0xFFF5F5F5),
+            surfaceContainerHigh = Color(0xFFEFEFEF),
+            surfaceContainerHighest = Color(0xFFE8E8E8),
         )
     }
     MaterialTheme(colorScheme = scheme, typography = AppTypography, content = content)
