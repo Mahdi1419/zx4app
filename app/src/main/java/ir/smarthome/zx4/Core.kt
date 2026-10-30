@@ -64,7 +64,10 @@ object Repo {
                 }
             }
         }
-        if (activeItemId == null && pending.isNotEmpty()) activeItemId = pending.keys.first()
+        if (activeItemId !in pending.keys) {
+            activeItemId = pending.keys.firstOrNull()
+            s.edit().putString("active_item", activeItemId).apply()
+        }
     }
 
     private fun defaults() = listOf(
