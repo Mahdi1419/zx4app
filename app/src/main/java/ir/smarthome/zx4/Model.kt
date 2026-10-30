@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 
-/** delaySec = مدت انتظار بعد از ارسال این پیامک تا ارسال پیامک بعدی */
+/** delaySec = مدت تأخیر این مرحله نسبت به مرحله قبلی؛ مرحله اول نادیده گرفته می‌شود. */
 data class Step(val cmd: String, val delaySec: Int, val waitForReply: Boolean = false, val timeoutSec: Int = 60)
 
 data class Schedule(
