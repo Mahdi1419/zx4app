@@ -169,8 +169,8 @@ object Engine {
 
     @Synchronized
     fun runStep(ctx: Context, itemId: String, idx: Int, source: String) {
-        val item = Repo.item(itemId) ?: run { finish(itemId); return }
-        val step = item.steps.getOrNull(idx) ?: run { finish(itemId); return }
+        val item = Repo.item(itemId) ?: run { finish(ctx, itemId); return }
+        val step = item.steps.getOrNull(idx) ?: run { finish(ctx, itemId); return }
         if (Repo.activeItemId != itemId) {
             if (Repo.activeItemId != null) return
             Repo.setActive(itemId)
@@ -181,7 +181,7 @@ object Engine {
         val err = try { send(ctx, Repo.phone, step.cmd); null } catch (e: Exception) { e.message ?: "خطا" }
         Repo.addEntry(Entry(Repo.uid(), item.id, item.name, step.cmd, now, source, err, emptyList()))
         if (err != null) {
-            finish(itemId)
+            finish(ctx, itemId)
             notifyUser(ctx, item.name, "ارسال ناموفق: $err")
             CommandWidgetProvider.refreshAll(ctx)
             return
@@ -200,7 +200,7 @@ object Engine {
     @Synchronized
     private fun advance(ctx: Context, item: Item, idx: Int, source: String) {
         val next = idx + 1
-        if (next >= item.steps.size) { finish(item.id); return }
+        if (next >= item.steps.size) { finish(ctx, item.id); return }
         val at = System.currentTimeMillis() + item.steps[next].delaySec.coerceAtLeast(0) * 1000L
         Repo.setPending(item.id, Pending(next, at, false, source))
         setAt(ctx, at, pi(ctx, STEP, item.id, next, source))
@@ -212,7 +212,7 @@ object Engine {
         val p = Repo.pending[itemId] ?: return
         if (!p.waitingReply || p.idx != idx || Repo.activeItemId != itemId) return
         am(ctx).cancel(pi(ctx, TIMEOUT, itemId, idx, p.source))
-        val item = Repo.item(itemId) ?: run { finish(itemId); return }
+        val item = Repo.item(itemId) ?: run { finish(ctx, itemId); return }
         Repo.clearPending(itemId)
         advance(ctx, item, idx, p.source)
         CommandWidgetProvider.refreshAll(ctx)
@@ -222,24 +222,32 @@ object Engine {
     private fun onTimeout(ctx: Context, itemId: String, idx: Int, source: String) {
         val p = Repo.pending[itemId] ?: return
         if (!p.waitingReply || p.idx != idx || Repo.activeItemId != itemId) return
+        if (p.at > System.currentTimeMillis()) {
+            setAt(ctx, p.at, pi(ctx, TIMEOUT, itemId, idx, source))
+            return
+        }
         Repo.clearPending(itemId)
         notifyUser(ctx, Repo.item(itemId)?.name ?: "فرمان", "مهلت انتظار برای پاسخ تمام شد")
-        Repo.item(itemId)?.let { advance(ctx, it, idx, source) } ?: finish(itemId)
+        Repo.item(itemId)?.let { advance(ctx, it, idx, source) } ?: finish(ctx, itemId)
         CommandWidgetProvider.refreshAll(ctx)
     }
 
     @Synchronized
     fun cancelRun(ctx: Context, itemId: String) {
         am(ctx).cancel(pi(ctx, STEP, itemId, 0, ""))
-        Repo.pending[itemId]?.let { p -> am(ctx).cancel(pi(ctx, TIMEOUT, itemId, p.idx, p.source)) }
+        Repo.pending[itemId]?.let { p ->
+            am(ctx).cancel(pi(ctx, if (p.waitingReply) TIMEOUT else STEP, itemId, p.idx, p.source))
+        }
+        finish(ctx, itemId)
+    }
+
+    private fun finish(ctx: Context, itemId: String) {
+        Repo.pending[itemId]?.let { p ->
+            am(ctx).cancel(pi(ctx, if (p.waitingReply) TIMEOUT else STEP, itemId, p.idx, p.source))
+        }
         Repo.clearPending(itemId)
         if (Repo.activeItemId == itemId) Repo.setActive(null)
         CommandWidgetProvider.refreshAll(ctx)
-    }
-
-    private fun finish(itemId: String) {
-        Repo.clearPending(itemId)
-        if (Repo.activeItemId == itemId) Repo.setActive(null)
     }
 
     fun schedule(ctx: Context, item: Item) {
@@ -255,7 +263,7 @@ object Engine {
         Repo.pending.toMap().forEach { (id, p) ->
             val item = Repo.item(id)
             if (item == null || item.steps.getOrNull(p.idx) == null) {
-                finish(id)
+                finish(ctx, id)
             } else if (p.waitingReply) {
                 if (p.at <= now) onTimeout(ctx, id, p.idx, p.source)
                 else setAt(ctx, p.at, pi(ctx, TIMEOUT, id, p.idx, p.source))
