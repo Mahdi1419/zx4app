@@ -15,7 +15,7 @@
         android:ellipsize="end"
         android:textColor="#FF252B34"
         android:textSize="14sp"
-        android:textStyle="medium"
+        android:textStyle="bold"
         android:paddingEnd="8dp" />
     <ProgressBar
         android:id="@+id/widget_loading"
