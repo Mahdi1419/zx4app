@@ -212,6 +212,7 @@ object Engine {
         val item = Repo.item(itemId) ?: run { finish(itemId); return }
         Repo.clearPending(itemId)
         advance(ctx, item, idx, p.source)
+        CommandWidgetProvider.refreshAll(ctx)
     }
 
     @Synchronized
