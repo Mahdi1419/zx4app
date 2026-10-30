@@ -4,15 +4,6 @@ package ir.smarthome.zx4
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.ShortcutInfo
-import android.content.pm.ShortcutManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.RectF
-import android.graphics.Typeface
-import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.background
