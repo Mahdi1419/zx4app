@@ -103,8 +103,7 @@ fun Root() {
         Repo.status = "«${item.name}» شروع شد" + if (item.steps.size > 1) " (${fa(item.steps.size.toString())} مرحله)" else ""
     }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-        MaterialTheme.colorScheme.primary.copy(alpha = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) 0.07f else 0.14f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)))) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
@@ -184,10 +183,10 @@ fun HomeTab(onEdit: (Item) -> Unit, onHistory: (Item) -> Unit, onSettings: () ->
                         Text("فضای شما", style = MaterialTheme.typography.labelLarge, color = accent)
                         Text(Repo.appTitle.ifBlank { "خانه هوشمند" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     }
-                    Box(Modifier.size(48.dp).clip(CircleShape).background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), accent.copy(alpha = 0.08f)))).border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Waves, null, tint = accent, modifier = Modifier.size(25.dp)) }
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant).border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Waves, null, tint = accent, modifier = Modifier.size(25.dp)) }
                 }
                 Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp))) {
-                    Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(accent.copy(alpha = if (dark) 0.25f else 0.16f), MaterialTheme.colorScheme.surface.copy(alpha = 0.97f), MaterialTheme.colorScheme.surface.copy(alpha = 0.84f)))))
+                    Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surface))
                     Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f), RoundedCornerShape(30.dp)).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -230,7 +229,7 @@ fun ItemCard(item: Item, onRun: () -> Unit, onEdit: () -> Unit, onHistory: () ->
     val c = Color(Palette[item.color % Palette.size]); val p = Repo.pending[item.id]
     Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f), contentColor = MaterialTheme.colorScheme.onSurface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
-            Box(Modifier.size(58.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.copy(alpha = 0.28f), c.copy(alpha = 0.08f)))).border(1.dp, c.copy(alpha = 0.34f), RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) { Icon(IconMap[item.icon] ?: Icons.Filled.Bolt, null, tint = c, modifier = Modifier.size(28.dp)) }
+            Box(Modifier.size(58.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) { Icon(IconMap[item.icon] ?: Icons.Filled.Bolt, null, tint = c, modifier = Modifier.size(28.dp)) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
                 Text(if (p != null) "مرحله " + fa((p.idx + 1).toString()) + " · " + fmt(p.at, "HH:mm:ss") else item.schedule.label() ?: (fa(item.steps.size.toString()) + " مرحله"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
