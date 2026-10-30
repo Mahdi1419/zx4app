@@ -158,7 +158,9 @@ object Engine {
             return false
         }
         Repo.setActive(item.id)
+        CommandWidgetProvider.refreshAll(ctx)
         runStep(ctx, item.id, 0, source)
+        CommandWidgetProvider.refreshAll(ctx)
         return true
     }
 
@@ -178,12 +180,14 @@ object Engine {
         if (err != null) {
             finish(itemId)
             notifyUser(ctx, item.name, "ارسال ناموفق: $err")
+            CommandWidgetProvider.refreshAll(ctx)
             return
         }
         if (step.waitForReply) {
             val timeoutAt = System.currentTimeMillis() + step.timeoutSec.coerceIn(1, 86_400) * 1000L
             Repo.setPending(itemId, Pending(idx, timeoutAt, true, source))
             setAt(ctx, timeoutAt, pi(ctx, TIMEOUT, itemId, idx, source))
+            CommandWidgetProvider.refreshAll(ctx)
         } else {
             advance(ctx, item, idx, source)
         }
@@ -196,6 +200,7 @@ object Engine {
         val at = System.currentTimeMillis() + item.steps[next].delaySec.coerceAtLeast(0) * 1000L
         Repo.setPending(item.id, Pending(next, at, false, source))
         setAt(ctx, at, pi(ctx, STEP, item.id, next, source))
+        CommandWidgetProvider.refreshAll(ctx)
     }
 
     @Synchronized
@@ -215,6 +220,7 @@ object Engine {
         Repo.clearPending(itemId)
         notifyUser(ctx, Repo.item(itemId)?.name ?: "فرمان", "مهلت انتظار برای پاسخ تمام شد")
         Repo.item(itemId)?.let { advance(ctx, it, idx, source) } ?: finish(itemId)
+        CommandWidgetProvider.refreshAll(ctx)
     }
 
     @Synchronized
@@ -223,6 +229,7 @@ object Engine {
         Repo.pending[itemId]?.let { p -> am(ctx).cancel(pi(ctx, TIMEOUT, itemId, p.idx, p.source)) }
         Repo.clearPending(itemId)
         if (Repo.activeItemId == itemId) Repo.setActive(null)
+        CommandWidgetProvider.refreshAll(ctx)
     }
 
     private fun finish(itemId: String) {
