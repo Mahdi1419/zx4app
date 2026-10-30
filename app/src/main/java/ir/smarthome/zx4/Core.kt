@@ -275,9 +275,12 @@ object Engine {
             TIMEOUT -> onTimeout(ctx, id, idx, src)
             SCHED -> {
                 Repo.item(id)?.let { item ->
-                    if (Repo.activeItemId == null) start(ctx, item, "schedule")
-                    else notifyUser(ctx, item.name, "زمان‌بندی به دلیل اجرای فرمان دیگری فعلاً اجرا نشد")
-                    schedule(ctx, item)
+                    if (Repo.activeItemId == null) {
+                        if (start(ctx, item, "schedule")) schedule(ctx, item)
+                    } else {
+                        // Keep the due run queued; retry shortly after the current global run finishes.
+                        setAt(ctx, System.currentTimeMillis() + 30_000L, pi(ctx, SCHED, id, 0, "schedule"))
+                    }
                 }
             }
         }
