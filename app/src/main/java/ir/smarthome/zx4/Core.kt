@@ -190,6 +190,7 @@ object Engine {
             CommandWidgetProvider.refreshAll(ctx)
         } else {
             advance(ctx, item, idx, source)
+            CommandWidgetProvider.refreshAll(ctx)
         }
     }
 
