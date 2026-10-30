@@ -1,6 +1,8 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package ir.smarthome.zx4
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
@@ -131,8 +133,20 @@ fun SettingsTab() {
         }
         Card2 {
             Text("ویجت صفحه اصلی", fontWeight = FontWeight.Bold)
-            Text("ویجت اندروید باید به‌صورت جداگانه پیاده‌سازی شود تا انتخاب آیتم‌ها، اجرای فرمان و نمایش وضعیت را پشتیبانی کند.",
+            Text("یک ویجت اضافه کن و آیتم‌ها یا گروهی از آیتم‌ها را برای اجرای سریع انتخاب کن.",
                 style = MaterialTheme.typography.bodySmall, color = sub)
+            OutlinedButton(onClick = {
+                if (Build.VERSION.SDK_INT >= 26) {
+                    val manager = AppWidgetManager.getInstance(ctx)
+                    if (manager.isRequestPinAppWidgetSupported) {
+                        manager.requestPinAppWidget(ComponentName(ctx, CommandWidgetProvider::class.java), null, null)
+                    } else {
+                        Repo.status = "لانچر گوشی افزودن مستقیم ویجت را پشتیبانی نمی‌کند؛ از فهرست ویجت‌های لانچر استفاده کنید."
+                    }
+                } else {
+                    Repo.status = "ویجت در اندروید ۸ به بالا قابل افزودن مستقیم است."
+                }
+            }, modifier = Modifier.fillMaxWidth()) { Text("افزودن ویجت به صفحه اصلی") }
         }
         Card2 {
             Text("شماره سیم‌کارت دستگاه", fontWeight = FontWeight.Bold)
